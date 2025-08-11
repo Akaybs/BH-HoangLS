@@ -1,0 +1,29 @@
+.vk-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.vk-btn {
+  width: 40px;
+  height: 40px;
+  margin: 2px;
+  font-size: 18px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #eee;
+  cursor: pointer;
+}
+
+.vk-btn:hover {
+  background-color: #ddd;
+}
+
+.vk-btn.reset {
+  background-color: red;
+  color: white;
+}
+
+.vk-btn.wide {
+  width: 86px; /* 50 + 2 + 2 + 50 = gần 106 để vừa 2 nút */
+}

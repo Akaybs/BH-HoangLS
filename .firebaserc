@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "hoang-web-vite",
+    "hoangls": "hoangls-1d597"
+  },
+  "targets": {},
+  "etags": {}
+}

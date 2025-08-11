@@ -1,0 +1,61 @@
+/* input.css */
+
+.custom-table-hover tbody tr:hover {
+  background-color: #ffeeba !important;
+}
+
+/* Khoảng cách phần bảng hiển thị */
+.section-table {
+  margin-top: 30px;
+}
+
+/* input.css */
+.table-bold td,
+.table-bold th {
+ /* font-weight: bold; */
+  font-size: 20px; 
+}
+/* input.css */
+
+.table-custom td,
+.table-custom th {
+  font-weight: normal;
+  font-size: 50px; /* 👈 tăng cỡ chữ ở đây, thử 18px, 20px tùy ý */
+}
+
+.data-table-custom-size {
+  font-size: 8px;  /* hoặc 14px, 16px tùy bạn */
+}
+
+/* input.css */
+.text-ok {
+  color: green;
+ /* font-weight: bold; */
+}
+
+.text-no {
+  color: red;
+ /* font-weight: bold; */
+}
+
+.text-back {
+  color: black;
+ /* font-weight: bold; */
+}
+
+.text-tratien {
+  color: rgb(8, 4, 230);
+ /* font-weight: bold; */
+}
+
+.table-striped-custom tbody tr:nth-child(odd) {
+  background-color: #f9f9f9;
+}
+
+.table-striped-custom tbody tr:nth-child(even) {
+  background-color: #ffffff;
+}
+.center-cell {
+  text-align: center;
+  vertical-align: middle;
+}
