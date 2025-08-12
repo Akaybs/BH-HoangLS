@@ -56,7 +56,6 @@ const FormNhapLieu = ({
     "iPhone 7",
     "iPhone 6S Plus",
     "iPhone 6s",
-
     "iPhone 6"
   ]);
 
