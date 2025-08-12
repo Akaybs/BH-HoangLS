@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import formatDisplayTime from "../utils/formatDisplayTime";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -32,7 +32,7 @@ const TableHeader = ({ filterText, setFilterText, handleAddData, editId }) => (
       <input
         type="text"
         className="form-control pe-5 fs-6"
-        placeholder="Tìm kiếm theo tên, IMEI, lỗi, thời gian..."
+        placeholder="Tìm kiếm theo ID, tên, IMEI, lỗi, thời gian..."
         value={filterText}
         onChange={(e) => setFilterText(e.target.value)}
         style={{ border: "2px solid #ccc", borderRadius: "8px" }}
@@ -51,11 +51,9 @@ const TableHeader = ({ filterText, setFilterText, handleAddData, editId }) => (
     </div>
      
     <div className="col-md-5 col-sm-3 mt-0">
-      
-    {/* Tiêu đề căn giữa */}
-    <h4 className="text-center fw-bold text-danger my-3">
-      📋 Danh Sách Bảo Hành
-    </h4>
+      <h4 className="text-center fw-bold text-danger my-3">
+        📋 Danh Sách Bảo Hành
+      </h4>
     </div>
     
   </div>
@@ -65,6 +63,20 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
   const [filterText, setFilterText] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Thêm state để debounce
+  const [debouncedFilter, setDebouncedFilter] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedFilter(filterText);
+    }, 300); // chờ 300ms sau khi ngừng gõ mới cập nhật
+
+    return () => clearTimeout(handler);
+  }, [filterText]);
 
   const onAskDelete = (id) => {
     setDeleteId(id);
@@ -77,34 +89,31 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
     setDeleteId(null);
   };
 
-  const [itemsPerPage, setItemsPerPage] = useState(15);
-  const [currentPage, setCurrentPage] = useState(1);
-
   const filteredItems = data
-  .filter((item) => {
-    const thoigian = item.thoigian?.toLowerCase() || "";
-    const ngayThang = thoigian.split(" ")[0]; // lấy phần "07/08/2025"
-    const gioPhut = thoigian.split(" ")[1] || ""; // lấy phần "12:32"
+    .filter((item) => {
+      const search = debouncedFilter.toLowerCase();
+      const thoigian = item.thoigian?.toLowerCase() || "";
+      const ngayThang = thoigian.split(" ")[0];
+      const gioPhut = thoigian.split(" ")[1] || "";
 
-    return (
-      item.name?.toLowerCase().includes(filterText.toLowerCase()) ||
-      item.iphone?.toLowerCase().includes(filterText.toLowerCase()) ||
-      item.imei?.toLowerCase().includes(filterText.toLowerCase()) ||
-      item.loi?.toLowerCase().includes(filterText.toLowerCase()) ||
-      item.thanhtoan?.toLowerCase().includes(filterText.toLowerCase()) ||
-      thoigian.includes(filterText.toLowerCase()) ||        // toàn chuỗi
-      ngayThang.includes(filterText.toLowerCase()) ||       // chỉ ngày
-      gioPhut.includes(filterText.toLowerCase())            // chỉ giờ
-    );
-  })
-  .sort((a, b) => b.id - a.id);
-
+      return (
+        item.id?.toString().includes(search) || // tìm theo ID
+        item.name?.toLowerCase().includes(search) ||
+        item.iphone?.toLowerCase().includes(search) ||
+        item.imei?.toLowerCase().includes(search) ||
+        item.loi?.toLowerCase().includes(search) ||
+        item.thanhtoan?.toLowerCase().includes(search) ||
+        thoigian.includes(search) ||
+        ngayThang.includes(search) ||
+        gioPhut.includes(search)
+      );
+    })
+    .sort((a, b) => b.id - a.id);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
-
 
   return (
     <div className="container-fluid">
@@ -143,7 +152,7 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
                   (row.thanhtoan === "Ok" ? "text-success" :
                     row.thanhtoan === "Nợ" ? "text-danger" :
                       row.thanhtoan === "Back" ? "text-back" :
-                        row.thanhtoan === "TT" ? "text-tratien" : "") + " text-center" // căn giữa
+                        row.thanhtoan === "TT" ? "text-tratien" : "") + " text-center"
                 }>
                   {row.thanhtoan}
                 </td>
@@ -151,7 +160,6 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
                   {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(row.tien)}
                 </td>
                 <td className="text-center">{row.thoigian}</td>
-
                 <td className="text-center">{row.sms}</td>
                 <td className="text-center">
                   <button className="btn btn-warning btn-sm me-1" onClick={() => onEdit(row)}>✏️</button>
@@ -179,57 +187,41 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
           </span>
           
           <nav>
-  <ul className="pagination mb-0">
-    {/* Nút Previous */}
-    <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-      <button
-        className="page-link"
-        onClick={() => setCurrentPage(currentPage - 1)}
-      >
-        &laquo;
-      </button>
-    </li>
+            <ul className="pagination mb-0">
+              <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => setCurrentPage(currentPage - 1)}>
+                  &laquo;
+                </button>
+              </li>
 
-    {(() => {
-      const pages = [];
-      let startPage = Math.max(1, currentPage - 2);
-      let endPage = Math.min(totalPages, startPage + 4);
+              {(() => {
+                const pages = [];
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, startPage + 4);
 
-      // Điều chỉnh khi gần cuối danh sách
-      if (endPage - startPage < 4) {
-        startPage = Math.max(1, endPage - 4);
-      }
+                if (endPage - startPage < 4) {
+                  startPage = Math.max(1, endPage - 4);
+                }
 
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(
-          <li
-            key={i}
-            className={`page-item ${currentPage === i ? "active" : ""}`}
-          >
-            <button
-              className="page-link"
-              onClick={() => setCurrentPage(i)}
-            >
-              {i}
-            </button>
-          </li>
-        );
-      }
-      return pages;
-    })()}
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <li key={i} className={`page-item ${currentPage === i ? "active" : ""}`}>
+                      <button className="page-link" onClick={() => setCurrentPage(i)}>
+                        {i}
+                      </button>
+                    </li>
+                  );
+                }
+                return pages;
+              })()}
 
-    {/* Nút Next */}
-    <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-      <button
-        className="page-link"
-        onClick={() => setCurrentPage(currentPage + 1)}
-      >
-        &raquo;
-      </button>
-    </li>
-  </ul>
-</nav>
-
+              <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => setCurrentPage(currentPage + 1)}>
+                  &raquo;
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
 

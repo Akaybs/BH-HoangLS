@@ -46,6 +46,7 @@ const FormNhapLieu = ({
     "iPhone 12",
     "iPhone 11 Pro Max",
     "iPhone 11 Pro",
+    "iPhone 11",
     "iPhone XS Max",
     "iPhone XS",
     "iPhone X",
@@ -59,23 +60,23 @@ const FormNhapLieu = ({
     "iPhone 6"
   ]);
 
-// "2025-08-08T21:00" -> "08/08/2025 21:00"
-function toDisplayFormat(value) {
-  if (!value) return "";
-  const [date, time] = value.split("T");
-  const [year, month, day] = date.split("-");
-  return `${day}/${month}/${year} ${time}`;
-}
+  // "2025-08-08T21:00" -> "08/08/2025 21:00"
+  function toDisplayFormat(value) {
+    if (!value) return "";
+    const [date, time] = value.split("T");
+    const [year, month, day] = date.split("-");
+    return `${day}/${month}/${year} ${time}`;
+  }
 
-// "08/08/2025 21:00" -> "2025-08-08T21:00"
-function toInputFormat(value) {
-  if (!value) return "";
-  const [date, time] = value.split(" ");
-  if (!date || !time) return "";
-  const [day, month, year] = date.split("/");
-  if (!day || !month || !year) return "";
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${time}`;
-}
+  // "08/08/2025 21:00" -> "2025-08-08T21:00"
+  function toInputFormat(value) {
+    if (!value) return "";
+    const [date, time] = value.split(" ");
+    if (!date || !time) return "";
+    const [day, month, year] = date.split("/");
+    if (!day || !month || !year) return "";
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${time}`;
+  }
 
   return (
 
@@ -265,21 +266,51 @@ function toInputFormat(value) {
           />
         </div>
 
-       <div className="w-50">
+        <div className="w-50 position-relative">
   <label className="form-label">Thời Gian</label>
   <input
-    className="form-control"
+    className="form-control pe-5"
+    style={{ maxWidth: "220px" }}
     type="datetime-local"
     required
     name="thoigian"
     onChange={(e) => {
       const formatted = toDisplayFormat(e.target.value);
-      console.log("Người dùng chọn:", e.target.value, "-> form lưu:", formatted);
       handleChange({ target: { name: "thoigian", value: formatted } });
     }}
     value={toInputFormat(form.thoigian)}
   />
+
+  {/* Icon đồng hồ trong ô */}
+  <span
+    className="position-absolute"
+    style={{
+      top: "70%", // dịch xuống một chút
+      right: "25px",
+      transform: "translateY(-50%)",
+      cursor: "pointer",
+      fontSize: "1.05rem",
+      color: "#6c757d"
+    }}
+    title="Lấy thời gian hiện tại"
+    onClick={() => {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const hh = String(now.getHours()).padStart(2, "0");
+      const min = String(now.getMinutes()).padStart(2, "0");
+      const defaultTimeDisplay = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+      setForm((prev) => ({ ...prev, thoigian: defaultTimeDisplay }));
+    }}
+  >
+    ⏱
+  </span>
 </div>
+
+
+
+
 
       </div>
 
@@ -291,10 +322,11 @@ function toInputFormat(value) {
               alert("⏰ Vui lòng nhập Thời Gian!");
               return;
             }
-            if (!form.tien || Number(form.tien) <= 0) {
+            if (form.tien === "" || form.tien === null || isNaN(Number(form.tien)) || Number(form.tien) < 0) {
               alert("💰 Vui lòng nhập số tiền hợp lệ!");
               return;
             }
+
             handleAddData();
           }}
         >
