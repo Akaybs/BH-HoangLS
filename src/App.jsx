@@ -8,7 +8,7 @@ const App = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const correctPassword = '3515'; // 👉 Thay mật khẩu tại đây
+  const correctPassword = '0000'; // 👉 Thay mật khẩu tại đây
 
   const handleSubmit = (e) => {
     e.preventDefault();
