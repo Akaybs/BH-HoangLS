@@ -104,8 +104,8 @@ const ThongKeTable = ({ data, khachHangList }) => {
       const key = `${m}-${year}`;
       if (!stats[key]) stats[key] = { total: 0, no: 0 };
       const tien = typeof d.tien === "number" ? d.tien : parseInt(d.tien, 10) || 0;
-stats[key].total += tien;
-if (d.thanhtoan === "Nợ") stats[key].no += tien;
+      stats[key].total += tien;
+      if (d.thanhtoan === "Nợ") stats[key].no += tien;
 
     });
 
@@ -113,10 +113,10 @@ if (d.thanhtoan === "Nợ") stats[key].no += tien;
 
     return Object.entries(stats)
       .sort((a, b) => {
-    const [ma, ya] = a[0].split("-").map(Number);
-    const [mb, yb] = b[0].split("-").map(Number);
-    return yb - ya || mb - ma; // Năm giảm dần, cùng năm thì tháng giảm dần
-  })
+        const [ma, ya] = a[0].split("-").map(Number);
+        const [mb, yb] = b[0].split("-").map(Number);
+        return yb - ya || mb - ma; // Năm giảm dần, cùng năm thì tháng giảm dần
+      })
       .map(([month, { total, no }]) => ({ month, total, no }));
   }, [data, selectedYear]);
 
@@ -242,18 +242,18 @@ if (d.thanhtoan === "Nợ") stats[key].no += tien;
       hour: "2-digit",
       minute: "2-digit",
     });
-const khachInfo = khachHangList.find(kh => kh.name === selectedKhach);
-const phone = khachInfo ? khachInfo.phone || "" : "";
+    const khachInfo = khachHangList.find(kh => kh.name === selectedKhach);
+    const phone = khachInfo ? khachInfo.phone || "" : "";
     await setDoc(doc(roitaiRef, nextId.toString()), {
-  id: nextId,
-  name: selectedKhach,
-  phone: phone, // thêm số điện thoại
-  loi: `Thanh toán ${totalUsed.toLocaleString()} ₫ cho ${count} máy `,
-  
-  thanhtoan: "TT",
-  thoigian: formattedTime,
-  sms: "Send",
-});
+      id: nextId,
+      name: selectedKhach,
+      phone: phone, // thêm số điện thoại
+      loi: `Thanh toán ${totalUsed.toLocaleString()} ₫ cho ${count} máy `,
+
+      thanhtoan: "TT",
+      thoigian: formattedTime,
+      sms: "Send",
+    });
     setModalTitle("✅ Thành công");
     setModalMessage(`<span class='text-success'>Đã tất toán ${count} mục cho ${selectedKhach}</span>`);
     setModalConfirm(null);
@@ -366,23 +366,64 @@ const phone = khachInfo ? khachInfo.phone || "" : "";
       <InfoModal show={showModal} title={modalTitle} message={modalMessage} onClose={() => setShowModal(false)} onConfirm={modalConfirm} />
 
       <div style={{ position: 'absolute', top: -9999, left: -9999 }}>
-        <div ref={printRef} style={{ width: 600, padding: 20, background: '#fff', fontSize: '14px' }}>
-          <h5 style={{ textAlign: 'center', color: '#2c3e50' }}>📋 Công nợ của {selectedKhach}</h5>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            marginTop: '10px',
+        <div
+          ref={printRef}
+          style={{
+            width: 720,
+            padding: 20,
+            background: '#f8f9fa',       // nền tổng thể nhã nhặn
             fontFamily: 'Arial, sans-serif',
-            fontSize: '13px'
-          }}>
+            fontSize: '14px',
+            borderRadius: '12px',
+            border: '1px solid #ddd'
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            {/* Thông tin khách hàng */}
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
+                Khách hàng: <span style={{ color: '#2980b9' }}>{selectedKhach}</span>
+              </p>
+              <p style={{ margin: '4px 0' }}>📞 SĐT: {khachHangList.find(kh => kh.name === selectedKhach)?.phone || "-"}</p>
+              <p style={{ margin: '4px 0' }}>📦 Tổng số máy nợ: {filteredData.filter(i => i.thanhtoan === "Nợ").length}</p>
+              <p style={{ margin: '4px 0', color: '#c0392b', fontWeight: 'bold' }}>
+                💵 Tổng nợ: {tongNo.toLocaleString("vi-VN")} ₫
+              </p>
+            </div>
+
+            {/* Logo */}
+            <div style={{ textAlign: 'right' }}>
+              <img
+                src="/logo.png"
+                alt="Logo"
+                style={{ width: 100, height: 'auto', borderRadius: '10px', border: '1px solid #eee' }}
+              />
+            </div>
+          </div>
+
+          {/* Bảng */}
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'separate',
+              borderSpacing: 0,
+              fontSize: '13px',
+              border: '1px solid #e0e0e0',
+              borderRadius: '10px',
+              overflow: 'hidden',
+              background: '#fff'
+            }}
+          >
             <thead>
-              <tr style={{ backgroundColor: '#f0f8ff' }}>
-                <th style={{ border: '1px solid #ccc', padding: '6px' }}>STT</th>
-                <th style={{ border: '1px solid #ccc', padding: '6px', textAlign: 'center' }}>Tên máy</th>
-                <th style={{ border: '1px solid #ccc', padding: '6px', textAlign: 'center' }}>Tình Trạng</th>
-                <th style={{ border: '1px solid #ccc', padding: '6px', textAlign: 'center' }}>Tiền</th>
-                <th style={{ border: '1px solid #ccc', padding: '6px', textAlign: 'center' }}>Ngày</th>
-                <th style={{ border: '1px solid #ccc', padding: '6px', textAlign: 'center' }}>Thanh toán</th>
+              <tr style={{ backgroundColor: '#eaf4fc', color: '#2c3e50' }}>
+                <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>STT</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>Tên máy</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>Tình trạng</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>IMEI</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #ddd', textAlign: 'center' }}>T.Tiền</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #ddd', textAlign: 'center' }}>Thời Gian</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>Thanh toán</th>
               </tr>
             </thead>
             <tbody>
@@ -400,30 +441,38 @@ const phone = khachInfo ? khachInfo.phone || "" : "";
                     })
                     : item.thoigian;
 
-
                   return (
-                    <tr key={item.id}>
-                      <td style={{ border: '1px solid #ccc', padding: '6px' }}>{idx + 1}</td>
-                      <td style={{ border: '1px solid #ccc', padding: '6px' }}>{item.iphone || "-"}</td>
-                      <td style={{ border: '1px solid #ccc', padding: '6px' }}>{item.loi || "-"}</td>
-                      <td style={{ border: '1px solid #ccc', padding: '6px', textAlign: 'center' }}>
-                        {(item.tien || 0).toLocaleString("vi-VN")} ₫
+                    <tr key={item.id} style={{ backgroundColor: idx % 2 === 0 ? '#fff' : '#f9fbfc' }}>
+                      <td style={{ padding: '6px', textAlign: 'center' }}>{idx + 1}</td>
+                      <td style={{ padding: '6px' }}>{item.iphone || "-"}</td>
+                      <td style={{ padding: '6px' }}>{item.loi || "-"}</td>
+                      <td style={{ padding: '6px' }}>{item.imei || "-"}</td>
+                      <td style={{ padding: '6px', textAlign: 'center', color: '#27ae60', fontWeight: 'bold' }}>
+                        {Number(item.tien || 0).toLocaleString("vi-VN")} ₫
                       </td>
-                      <td style={{ border: '1px solid #ccc', padding: '6px' }}>{ngay}</td>
-                      <td style={{ border: '1px solid #ccc', padding: '6px', textAlign: 'center' }}>{item.thanhtoan}</td>
+
+                      <td style={{ padding: '6px', textAlign: 'center' }}>{ngay}</td>
+                      <td
+                        style={{
+                          padding: '6px',
+                          textAlign: 'center',
+                          color: item.thanhtoan === "Nợ" ? '#e74c3c' : '#2c3e50',
+                          fontWeight: item.thanhtoan === "Nợ" ? 'bold' : 'normal'
+                        }}
+                      >
+                        {item.thanhtoan}
+                      </td>
                     </tr>
                   );
                 })}
             </tbody>
           </table>
-
-          <p style={{ marginTop: 12, fontWeight: 'bold', color: '#c0392b', textAlign: 'right' }}>
-            🏷️ Tổng nợ: {tongNo.toLocaleString("vi-VN")} ₫
-          </p>
-
-
         </div>
       </div>
+
+
+
+
 
 
     </div>

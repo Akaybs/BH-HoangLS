@@ -46,7 +46,6 @@ const FormNhapLieu = ({
     "iPhone 12",
     "iPhone 11 Pro Max",
     "iPhone 11 Pro",
-    "iPhone 11",
     "iPhone XS Max",
     "iPhone XS",
     "iPhone X",
@@ -56,9 +55,9 @@ const FormNhapLieu = ({
     "iPhone 7",
     "iPhone 6S Plus",
     "iPhone 6s",
+
     "iPhone 6"
   ]);
-
   // "2025-08-08T21:00" -> "08/08/2025 21:00"
   function toDisplayFormat(value) {
     if (!value) return "";
@@ -76,6 +75,7 @@ const FormNhapLieu = ({
     if (!day || !month || !year) return "";
     return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${time}`;
   }
+
 
   return (
 
@@ -193,6 +193,7 @@ const FormNhapLieu = ({
             value={form.tienText || ""}
           />
           <datalist id="ide2">
+
             {[...Array(25).keys()].map((i) => (
               <option
                 key={i}
@@ -202,35 +203,33 @@ const FormNhapLieu = ({
           </datalist>
         </div>
 
-        <div className="col-3 position-relative">
+        <div className="col-3">
           <label className="form-label">T.Toán</label>
-
-          <input
-            className="form-control pe-5"
-            name="thanhtoan"
-            list="toanOptions"
-            onChange={handleChange}
-            value={form.thanhtoan || ""}
-            autoComplete="off"
-          />
-
-          <datalist id="toanOptions">
-            {dropToan.map((item, index) => (
-              <option key={index} value={item} />
-            ))}
-          </datalist>
-
-          {form.thanhtoan && (
-            <span
-              className="position-absolute top-47 end-0 translate-middle-y me-2 text-danger"
-              style={{ cursor: "pointer", fontSize: "1.2rem" }}
-              onClick={() =>
-                handleChange({ target: { name: "thanhtoan", value: "" } })
-              }
-            >
-              ✕
-            </span>
-          )}
+          <div style={{ position: "relative" }}>
+            <input
+              className="form-control pe-5"
+              name="thanhtoan"
+              list="toanOptions"
+              onChange={handleChange}
+              value={form.thanhtoan || ""}
+              autoComplete="off"
+            />
+            {form.thanhtoan && (
+              <button
+                type="button"
+                className="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y me-2"
+                onClick={() => handleChange({ target: { name: "thanhtoan", value: "" } })}
+                style={{ zIndex: 2 }}
+              >
+                ❌
+              </button>
+            )}
+            <datalist id="toanOptions">
+              {dropToan.map((item, index) => (
+                <option key={index} value={item} />
+              ))}
+            </datalist>
+          </div>
         </div>
 
 
@@ -240,17 +239,32 @@ const FormNhapLieu = ({
 
         <div className="col-3">
           <label className="form-label">SMS</label>
-          <select
-            className="form-select"
-            name="sms"
-            onChange={handleChange}
-            value={form.sms || "No"}
-          >
-            <option value="Yes">Có</option>
-            <option value="No">Không</option>
-            <option value="Done">TT</option>
-          </select>
+          <div style={{ position: "relative" }}>
+            <select
+              className="form-select pe-5"
+              name="sms"
+              onChange={handleChange}
+              value={form.sms || "No"}
+            >
+              <option value="Yes">Có</option>
+              <option value="No">Không</option>
+              <option value="TT">TT</option>
+              <option value="Done">Done</option>
+            </select>
+
+            {form.sms && (
+              <button
+                type="button"
+                className="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y me-2"
+                onClick={() => handleChange({ target: { name: "sms", value: "" } })}
+                style={{ zIndex: 2 }}
+              >
+                ❌
+              </button>
+            )}
+          </div>
         </div>
+
       </div>
 
       <div className="mb-3 d-flex gap-2">
@@ -266,46 +280,46 @@ const FormNhapLieu = ({
         </div>
 
         <div className="w-50 position-relative">
-  <label className="form-label">Thời Gian</label>
-  <input
-    className="form-control pe-5"
-    style={{ maxWidth: "220px" }}
-    type="datetime-local"
-    required
-    name="thoigian"
-    onChange={(e) => {
-      const formatted = toDisplayFormat(e.target.value);
-      handleChange({ target: { name: "thoigian", value: formatted } });
-    }}
-    value={toInputFormat(form.thoigian)}
-  />
+          <label className="form-label">Thời Gian</label>
+          <input
+            className="form-control pe-5"
+            style={{ maxWidth: "220px" }}
+            type="datetime-local"
+            required
+            name="thoigian"
+            onChange={(e) => {
+              const formatted = toDisplayFormat(e.target.value);
+              handleChange({ target: { name: "thoigian", value: formatted } });
+            }}
+            value={toInputFormat(form.thoigian)}
+          />
 
-  {/* Icon đồng hồ trong ô */}
-  <span
-    className="position-absolute"
-    style={{
-      top: "70%", // dịch xuống một chút
-      right: "25px",
-      transform: "translateY(-50%)",
-      cursor: "pointer",
-      fontSize: "1.05rem",
-      color: "#6c757d"
-    }}
-    title="Lấy thời gian hiện tại"
-    onClick={() => {
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      const hh = String(now.getHours()).padStart(2, "0");
-      const min = String(now.getMinutes()).padStart(2, "0");
-      const defaultTimeDisplay = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-      setForm((prev) => ({ ...prev, thoigian: defaultTimeDisplay }));
-    }}
-  >
-    ⏱
-  </span>
-</div>
+          {/* Icon đồng hồ trong ô */}
+          <span
+            className="position-absolute"
+            style={{
+              top: "70%", // dịch xuống một chút
+              right: "25px",
+              transform: "translateY(-50%)",
+              cursor: "pointer",
+              fontSize: "1.05rem",
+              color: "#6c757d"
+            }}
+            title="Lấy thời gian hiện tại"
+            onClick={() => {
+              const now = new Date();
+              const yyyy = now.getFullYear();
+              const mm = String(now.getMonth() + 1).padStart(2, "0");
+              const dd = String(now.getDate()).padStart(2, "0");
+              const hh = String(now.getHours()).padStart(2, "0");
+              const min = String(now.getMinutes()).padStart(2, "0");
+              const defaultTimeDisplay = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+              setForm((prev) => ({ ...prev, thoigian: defaultTimeDisplay }));
+            }}
+          >
+            ⏱
+          </span>
+        </div>
 
 
 
@@ -321,8 +335,12 @@ const FormNhapLieu = ({
               alert("⏰ Vui lòng nhập Thời Gian!");
               return;
             }
-            if (form.tien === "" || form.tien === null || isNaN(Number(form.tien)) || Number(form.tien) < 0) {
-              alert("💰 Vui lòng nhập số tiền hợp lệ!");
+            if (form.tien === undefined || form.tien === null || form.tien === "") {
+              alert("💰 Vui lòng nhập số tiền!");
+              return;
+            }
+            if (Number(form.tien) < 0) {
+              alert("💰 Số tiền không được âm!");
               return;
             }
 
@@ -332,25 +350,7 @@ const FormNhapLieu = ({
           {form.id ? "💾 Cập nhật" : "➕ Thêm"}
         </button>
 
-        <button
-          className="btn btn-outline-secondary"
-          onClick={() => {
-            const now = new Date();
-            const yyyy = now.getFullYear();
-            const mm = String(now.getMonth() + 1).padStart(2, "0");
-            const dd = String(now.getDate()).padStart(2, "0");
-            const hh = String(now.getHours()).padStart(2, "0");
-            const min = String(now.getMinutes()).padStart(2, "0");
-            const defaultTime = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-
-            setForm({
-              sms: "Yes",
-              thoigian: defaultTime,
-            });
-          }}
-        >
-
-
+        <button className="btn btn-outline-secondary" onClick={() => setForm({ sms: "Yes" })}>
           🧹 Xóa Form
         </button>
       </div>
