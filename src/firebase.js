@@ -9,16 +9,7 @@ import {
 } from 'firebase/auth';
 
 // Cấu hình Firebase
-const firebaseConfig = { 
-  apiKey : "AIzaSyD-f2CMpJkrXrjttgoPAouLPQon4jd5PWE" , 
-  authDomain : "hoanglsls.firebaseapp.com" , 
-  databaseURL : "https://hoanglsls-default-rtdb.asia-southeast1.firebasedatabase.app" , 
-  projectId : "hoanglsls" , 
-  storageBucket : "hoanglsls.firebasestorage.app" , 
-  messagingSenderId : "372270820186" , 
-  appId : "1:372270820186:web:a38eb86172e63d0266e163" , 
-  measurementId : "G-47DYM0JKT7" 
-};
+
 
 // Khởi tạo Firebase
 const app = initializeApp(firebaseConfig);
