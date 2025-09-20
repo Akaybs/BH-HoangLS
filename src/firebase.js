@@ -9,6 +9,8 @@ import {
 } from 'firebase/auth';
 
 // Cấu hình Firebase
+// Your web app's Firebase configuration
+
 
 
 // Khởi tạo Firebase

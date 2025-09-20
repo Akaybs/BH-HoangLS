@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "../firebase";
-import { doc, updateDoc, setDoc, collection, getDocs } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  writeBatch
+} from "firebase/firestore";
 import html2canvas from "html2canvas";
-import { saveAs } from "file-saver"; // nếu muốn tải file ảnh xuống
+import { saveAs } from "file-saver";
 
+import { getNextRoiTaiId } from "../utils/roitaiCounter";
 
-// Hàm parse chuỗi "dd/MM/yyyy HH:mm" thành Date
 function parseVNDate(str) {
   if (!str) return null;
   const [datePart, timePart] = str.split(" ");
@@ -13,8 +22,6 @@ function parseVNDate(str) {
   const [hour = 0, minute = 0] = timePart ? timePart.split(":").map(Number) : [];
   return new Date(year, month - 1, day, hour, minute);
 }
-
-
 
 function InfoModal({ show, title, message, onClose, onConfirm }) {
   if (!show) return null;
@@ -54,18 +61,19 @@ const ThongKeTable = ({ data, khachHangList }) => {
   const [modalMessage, setModalMessage] = useState("");
   const [modalConfirm, setModalConfirm] = useState(null);
 
-  // --- Thống kê ngày hiện tại ---
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const [selectedDateOffset, setSelectedDateOffset] = useState(0);
+
+  const currentDate = new Date();
+  currentDate.setDate(currentDate.getDate() - selectedDateOffset);
+  currentDate.setHours(0, 0, 0, 0);
 
   const todayData = data.filter((d) => {
     const date = parseVNDate(d.thoigian);
     if (!date) return false;
     const dateOnly = new Date(date);
     dateOnly.setHours(0, 0, 0, 0);
-    return dateOnly.getTime() === today.getTime();
+    return dateOnly.getTime() === currentDate.getTime();
   });
-
 
   const todayTotal = todayData.reduce((sum, d) => {
     const tien = typeof d.tien === "number" ? d.tien : parseInt(d.tien, 10) || 0;
@@ -78,9 +86,7 @@ const ThongKeTable = ({ data, khachHangList }) => {
     const tien = typeof d.tien === "number" ? d.tien : parseInt(d.tien, 10) || 0;
     return d.thanhtoan === "Nợ" ? sum + tien : sum;
   }, 0);
-  console.log("📅 Dữ liệu hôm nay:", todayData);
 
-  // --- Thống kê theo tháng ---
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const yearList = useMemo(() => {
     const years = data
@@ -91,7 +97,6 @@ const ThongKeTable = ({ data, khachHangList }) => {
       .filter((y) => !isNaN(y));
     return [...new Set(years)].sort((a, b) => b - a);
   }, [data]);
-
 
   const monthStats = useMemo(() => {
     const stats = {};
@@ -106,16 +111,13 @@ const ThongKeTable = ({ data, khachHangList }) => {
       const tien = typeof d.tien === "number" ? d.tien : parseInt(d.tien, 10) || 0;
       stats[key].total += tien;
       if (d.thanhtoan === "Nợ") stats[key].no += tien;
-
     });
-
-
 
     return Object.entries(stats)
       .sort((a, b) => {
         const [ma, ya] = a[0].split("-").map(Number);
         const [mb, yb] = b[0].split("-").map(Number);
-        return yb - ya || mb - ma; // Năm giảm dần, cùng năm thì tháng giảm dần
+        return yb - ya || mb - ma;
       })
       .map(([month, { total, no }]) => ({ month, total, no }));
   }, [data, selectedYear]);
@@ -206,11 +208,12 @@ const ThongKeTable = ({ data, khachHangList }) => {
   const executeTatToan = async (unpaidItems, remaining) => {
     let count = 0;
     let totalUsed = 0;
-    const updates = [];
+    const batch = writeBatch(db);
+
     for (const item of unpaidItems) {
       const tien = typeof item.tien === "number" ? item.tien : parseInt(item.tien, 10) || 0;
       if (partialPayment.toLowerCase() === "all" || remaining >= tien) {
-        updates.push(updateDoc(doc(db, "roitai", item.id.toString()), { thanhtoan: "Ok" }));
+        batch.update(doc(db, "roitai", item.id.toString()), { thanhtoan: "Ok" });
         count++;
         totalUsed += tien;
         if (partialPayment.toLowerCase() !== "all") remaining -= tien;
@@ -226,14 +229,13 @@ const ThongKeTable = ({ data, khachHangList }) => {
       return;
     }
 
-    await Promise.all(updates);
+    await batch.commit();
 
-    const roitaiRef = collection(db, "roitai");
-    const snapshot = await getDocs(roitaiRef);
-    const idNumbers = snapshot.docs
-      .map((docSnap) => parseInt(docSnap.id, 10))
-      .filter((n) => !isNaN(n));
-    const nextId = idNumbers.length ? Math.max(...idNumbers) + 1 : 0;
+  const roitaiRef = collection(db, "roitai");
+const nextId = await getNextRoiTaiId(db);
+
+
+
     const now = new Date();
     const formattedTime = now.toLocaleString("vi-VN", {
       day: "2-digit",
@@ -242,18 +244,20 @@ const ThongKeTable = ({ data, khachHangList }) => {
       hour: "2-digit",
       minute: "2-digit",
     });
+
     const khachInfo = khachHangList.find(kh => kh.name === selectedKhach);
     const phone = khachInfo ? khachInfo.phone || "" : "";
+
     await setDoc(doc(roitaiRef, nextId.toString()), {
       id: nextId,
       name: selectedKhach,
-      phone: phone, // thêm số điện thoại
+      phone,
       loi: `Thanh toán ${totalUsed.toLocaleString()} ₫ cho ${count} máy `,
-
       thanhtoan: "TT",
       thoigian: formattedTime,
       sms: "Send",
     });
+
     setModalTitle("✅ Thành công");
     setModalMessage(`<span class='text-success'>Đã tất toán ${count} mục cho ${selectedKhach}</span>`);
     setModalConfirm(null);
@@ -262,6 +266,12 @@ const ThongKeTable = ({ data, khachHangList }) => {
   };
 
   const printRef = useRef();
+
+  const getKhachPassword = (name) => {
+    const kh = khachHangList.find(k => k.name === name);
+    if (!kh) return "liên hệ";
+    return kh.pass || "liên hệ";
+  };
 
   const handleExportImage = async () => {
     if (!printRef.current) return;
@@ -276,28 +286,95 @@ const ThongKeTable = ({ data, khachHangList }) => {
 
   return (
     <div className="p-2">
-      {/* Thống kê ngày hiện tại */}
-      <div className="mb-3 p-2 border rounded bg-light text-center">
-        <div className="d-flex justify-content-center flex-wrap gap-3 mb-2">
-          <div className="fw-bold text-primary">📅 Hôm nay: {todayData.length} đơn</div>
-          <div className="fw-bold text-danger">🏷️ Nợ: {todayNoCount} đơn</div>
+      {/* Thống kê ngày hiện tại hoặc ngày chọn */}
+      <div className="mb-3 p-3 border rounded bg-light">
+        {/* Tiêu đề + chọn ngày */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h6 className="fw-bold text-primary m-0">📊 Thống kê ngày</h6>
+          <div className="d-flex align-items-center gap-2">
+            <label className="form-label m-0 fw-bold text-secondary small">Ngày:</label>
+            <select
+              className="form-select form-select-sm w-auto"
+              value={selectedDateOffset}
+              onChange={(e) => setSelectedDateOffset(Number(e.target.value))}
+            >
+              <option value={0}>Hôm nay</option>
+              <option value={1}>Hôm qua</option>
+              <option value={2}>Hôm kia</option>
+            </select>
+          </div>
         </div>
-        <div className="d-flex justify-content-center flex-wrap gap-3">
-          <div>💰 Tổng tiền: <span className="text-success fw-bold">{todayTotal.toLocaleString("vi-VN")} ₫</span></div>
-          <div>💵 Tổng nợ: <span className="text-danger fw-bold">{todayNoTotal.toLocaleString("vi-VN")} ₫</span></div>
+
+        {/* Bố cục 2 cột */}
+        <div className="row text-center g-3">
+          {/* Cột trái */}
+          <div className="col-md-6">
+            <div className="p-2 mb-3 bg-white rounded shadow-sm">
+              📅 {selectedDateOffset === 0
+                ? "Hôm nay"
+                : selectedDateOffset === 1
+                  ? "Hôm qua"
+                  : selectedDateOffset === 2
+                    ? "Hôm kia"
+                    : `${selectedDateOffset} ngày trước`}
+              <div className="fw-bold text-primary">{todayData.length} đơn</div>
+            </div>
+            <div className="p-2 bg-white rounded shadow-sm">
+              🏷️ Nợ
+              <div className="fw-bold text-danger">{todayNoCount} đơn</div>
+            </div>
+          </div>
+
+          {/* Cột phải */}
+          <div className="col-md-6">
+            <div className="p-2 mb-3 bg-white rounded shadow-sm">
+              💰 Tổng tiền
+              <div className="fw-bold text-success">
+                {todayTotal.toLocaleString("vi-VN")} ₫
+              </div>
+            </div>
+            <div className="p-2 bg-white rounded shadow-sm">
+              💵 Tổng nợ
+              <div className="fw-bold text-danger">
+                {todayNoTotal.toLocaleString("vi-VN")} ₫
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+
 
       {/* Phần tất toán */}
       <div className="mb-2">
         <label className="form-label fw-bold small">Chọn khách hàng:</label>
-        <input
-          list="datalist-khach"
-          className="form-control form-control-sm"
-          value={selectedKhach}
-          onChange={(e) => setSelectedKhach(e.target.value)}
-          placeholder="Chọn hoặc nhập tên"
-        />
+        <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+          <input
+            list="datalist-khach"
+            className="form-control form-control-sm pe-4" // thêm padding để không bị che
+            value={selectedKhach}
+            onChange={(e) => setSelectedKhach(e.target.value)}
+            placeholder="Chọn hoặc nhập tên"
+          />
+          {selectedKhach && (
+            <span
+              onClick={() => setSelectedKhach("")}
+              style={{
+                position: "absolute",
+                right: "8px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                cursor: "pointer",
+                color: "red",
+                fontWeight: "bold",
+                fontSize: "16px",
+              }}
+            >
+              ✖
+            </span>
+          )}
+        </div>
+
         <datalist id="datalist-khach">
           {khachHangList.map((kh) => (
             <option key={kh.id} value={kh.name}>
@@ -327,6 +404,9 @@ const ThongKeTable = ({ data, khachHangList }) => {
             onChange={(e) => setPartialPayment(e.target.value)}
           />
           <button className="btn btn-sm btn-secondary" onClick={handleTatToan}>✅ Tất toán</button>
+          <button className="btn btn-sm btn-info" onClick={handleExportImage}>
+            📷 Xuất ảnh
+          </button>
         </div>
       )}
 
@@ -386,9 +466,9 @@ const ThongKeTable = ({ data, khachHangList }) => {
                 Khách hàng: <span style={{ color: '#2980b9' }}>{selectedKhach}</span>
               </p>
               <p style={{ margin: '4px 0' }}>📞 SĐT: {khachHangList.find(kh => kh.name === selectedKhach)?.phone || "-"}</p>
-              <p style={{ margin: '4px 0' }}>📦 Tổng số máy nợ: {filteredData.filter(i => i.thanhtoan === "Nợ").length}</p>
+              <p style={{ margin: '4px 0' }}>🧾 Tổng số máy nợ: {filteredData.filter(i => i.thanhtoan === "Nợ").length}</p>
               <p style={{ margin: '4px 0', color: '#c0392b', fontWeight: 'bold' }}>
-                💵 Tổng nợ: {tongNo.toLocaleString("vi-VN")} ₫
+                💰 Tổng nợ: {tongNo.toLocaleString("vi-VN")} ₫
               </p>
             </div>
 
@@ -423,12 +503,13 @@ const ThongKeTable = ({ data, khachHangList }) => {
                 <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>IMEI</th>
                 <th style={{ padding: '8px', borderBottom: '1px solid #ddd', textAlign: 'center' }}>T.Tiền</th>
                 <th style={{ padding: '8px', borderBottom: '1px solid #ddd', textAlign: 'center' }}>Thời Gian</th>
-                <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>Thanh toán</th>
+                <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>T.Toán</th>
               </tr>
             </thead>
             <tbody>
               {filteredData
                 .filter(i => i.thanhtoan === "Nợ")
+                .sort((a, b) => b.id - a.id)   // 👉 Sắp xếp theo ID giảm dần
                 .map((item, idx) => {
                   const date = parseVNDate(item.thoigian);
                   const ngay = date
@@ -467,6 +548,16 @@ const ThongKeTable = ({ data, khachHangList }) => {
                 })}
             </tbody>
           </table>
+          {/* Footer: thêm chữ Xem chi tiết và mật khẩu khách hàng ở cuối ảnh */}
+          <div style={{ marginTop: 14, borderTop: '1px dashed #ccc', paddingTop: 10, textAlign: 'center' }}>
+            <div style={{ fontSize: 13, color: '#2c3e50' }}>
+              🔗 <span style={{ fontStyle: 'italic', color: '#2980b9', fontWeight: 'bold' }}>Xem chi tiết tại:</span>
+              <span style={{ color: '#8e44ad', fontWeight: 'bold' }}> https://hoanglsls.web.app </span>&nbsp;|&nbsp;
+              🔑 <span style={{ fontStyle: 'italic', color: '#0b5229ff', fontWeight: 'bold' }}>Mật khẩu: </span>
+              <strong style={{ color: '#c0392b' }}>{getKhachPassword(selectedKhach)}</strong>
+            </div>
+          </div>
+
         </div>
       </div>
 

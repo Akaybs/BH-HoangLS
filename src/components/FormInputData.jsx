@@ -6,6 +6,7 @@ import RoiTaiTable from "./RoiTaiTable";
 import FormNhapLieu from "./FormNhapLieu";
 import ThongKeTable from "./ThongKeTable";
 import DanhSachDropdown from "./DanhSachDropdown";
+import { getNextRoiTaiId } from "../utils/roitaiCounter";
 
 
 import {
@@ -219,12 +220,7 @@ const FormInputData = () => {
 
   const handleAddData = async () => {
   try {
-    const querySnapshot = await getDocs(roitaiRef);
-
-    const idNumbers = querySnapshot.docs
-      .map((doc) => parseInt(doc.id))
-      .filter((num) => !isNaN(num));
-    const nextId = idNumbers.length > 0 ? Math.max(...idNumbers) + 1 : 0;
+    const nextId = await getNextRoiTaiId(db);
 
     // ✅ Chuyển định dạng thời gian từ yyyy-MM-ddTHH:mm sang dd/MM/yyyy HH:mm
     let formattedTime = form.thoigian;
