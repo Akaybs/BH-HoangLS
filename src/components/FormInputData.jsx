@@ -6,7 +6,8 @@ import RoiTaiTable from "./RoiTaiTable";
 import FormNhapLieu from "./FormNhapLieu";
 import ThongKeTable from "./ThongKeTable";
 import DanhSachDropdown from "./DanhSachDropdown";
-import { getNextRoiTaiId } from "../utils/roitaiCounter";
+import { getSimpleNextId } from "../utils/getSimpleNextId";
+
 
 
 import {
@@ -220,7 +221,7 @@ const FormInputData = () => {
 
   const handleAddData = async () => {
   try {
-    const nextId = await getNextRoiTaiId(db);
+    const nextId = await getSimpleNextId(db);   // ✅ dùng hàm mới
 
     // ✅ Chuyển định dạng thời gian từ yyyy-MM-ddTHH:mm sang dd/MM/yyyy HH:mm
     let formattedTime = form.thoigian;
@@ -323,11 +324,11 @@ const FormInputData = () => {
             >
               {hienThongKe ? (
                 <>
-                  Ẩn thống kê ▲
+                  Ẩn Thống Kê ▲
                 </>
               ) : (
                 <>
-                  Hiện thống kê ▼
+                  Hiện Thống Kê ▼
                 </>
               )}
             </button>

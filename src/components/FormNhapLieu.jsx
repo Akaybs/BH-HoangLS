@@ -83,28 +83,37 @@ const FormNhapLieu = ({
   const intervalRef = useRef(null);
 
   // Auto cập nhật Thời Gian mỗi phút
-useEffect(() => {
-  if (autoUpdate) {
-    const updateNow = () => {
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      const hh = String(now.getHours()).padStart(2, "0");
-      const min = String(now.getMinutes()).padStart(2, "0");
-      const formatted = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-      setForm((prev) => ({ ...prev, thoigian: formatted }));
+  useEffect(() => {
+    if (autoUpdate) {
+      const updateNow = () => {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const hh = String(now.getHours()).padStart(2, "0");
+        const min = String(now.getMinutes()).padStart(2, "0");
+        const formatted = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+        setForm((prev) => ({ ...prev, thoigian: formatted }));
+      };
+
+      updateNow(); // chạy ngay khi mount
+      intervalRef.current = setInterval(updateNow, 60 * 1000); // chạy mỗi phút
+    }
+
+
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-
-    updateNow(); // chạy ngay khi mount
-    intervalRef.current = setInterval(updateNow, 60 * 1000); // chạy mỗi phút
-  }
-
-  return () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  };
-}, [autoUpdate, setForm]);
-
+  }, [autoUpdate, setForm]);
+   // ✅ useEffect mới phải đặt ở đây, không đặt trong return
+  useEffect(() => {
+    if (form && form.id) {
+      setAutoUpdate(false); // Edit => tắt auto-update
+    } else {
+      setAutoUpdate(true);  // Thêm mới => bật lại auto-update
+    }
+  }, [form && form.id]);
 
   return (
     <div className="card-body">
@@ -140,7 +149,7 @@ useEffect(() => {
               )
               .map((khach) => (
                 <option key={khach.id} value={khach.name}>
-               {/*       ({khach.phone})     */}
+                  {/*       ({khach.phone})     */}
                 </option>
               ))}
           </datalist>
@@ -442,9 +451,11 @@ useEffect(() => {
 
         <button
           className="btn btn-outline-secondary"
-          onClick={() =>
-            setForm({ sms: "Yes", thanhtoan: "Nợ", thoigian: getNowFormatted() })
-          }
+          onClick={() => {
+            setForm({ sms: "Yes", thanhtoan: "Nợ", thoigian: getNowFormatted() });
+            setAutoUpdate(false); // bật lại auto-update khi reset form
+          }}
+
         >
           🧹 Xóa Form
         </button>

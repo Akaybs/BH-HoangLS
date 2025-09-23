@@ -13,7 +13,8 @@ import {
 import html2canvas from "html2canvas";
 import { saveAs } from "file-saver";
 
-import { getNextRoiTaiId } from "../utils/roitaiCounter";
+import { getSimpleNextId } from "../utils/getSimpleNextId";
+
 
 function parseVNDate(str) {
   if (!str) return null;
@@ -97,6 +98,21 @@ const ThongKeTable = ({ data, khachHangList }) => {
       .filter((y) => !isNaN(y));
     return [...new Set(years)].sort((a, b) => b - a);
   }, [data]);
+
+
+
+
+
+  const debtCustomers = Array.from(
+    new Set(
+      data
+        .filter((d) => d.thanhtoan === "Nợ")
+        .map((d) => d.name)
+    )
+  );
+
+
+
 
   const monthStats = useMemo(() => {
     const stats = {};
@@ -231,8 +247,8 @@ const ThongKeTable = ({ data, khachHangList }) => {
 
     await batch.commit();
 
-  const roitaiRef = collection(db, "roitai");
-const nextId = await getNextRoiTaiId(db);
+    const roitaiRef = collection(db, "roitai");
+    const nextId = await getNextRoiTaiId(db);
 
 
 
@@ -290,7 +306,7 @@ const nextId = await getNextRoiTaiId(db);
       <div className="mb-3 p-3 border rounded bg-light">
         {/* Tiêu đề + chọn ngày */}
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h6 className="fw-bold text-primary m-0">📊 Thống kê ngày</h6>
+          <h6 className="fw-bold text-primary m-0">📊 Thống Kê Ngày</h6>
           <div className="d-flex align-items-center gap-2">
             <label className="form-label m-0 fw-bold text-secondary small">Ngày:</label>
             <select
@@ -412,7 +428,7 @@ const nextId = await getNextRoiTaiId(db);
 
       {/* Thống kê theo tháng đặt dưới cùng */}
       <div className="mt-4 mb-2 d-flex justify-content-between align-items-center bg-info bg-opacity-25 p-2 rounded">
-        <h6 className="fw-bold m-0 text-info">📊 Thống kê theo tháng</h6>
+        <h6 className="fw-bold m-0 text-info">📊 Thống Kê Theo Tháng</h6>
         <select
           className="form-select form-select-sm w-auto border-info text-info"
           value={selectedYear}
@@ -442,6 +458,73 @@ const nextId = await getNextRoiTaiId(db);
           ))}
         </tbody>
       </table>
+
+      {/* Danh sách khách hàng đang nợ theo tháng */}
+      <div
+        className="mt-4 mb-2 d-flex justify-content-between align-items-center p-2 rounded shadow-sm"
+        style={{ background: "linear-gradient(90deg, #ebc520ff, #e3f2fd)" }}
+      >
+        <h6 className="fw-bold m-0 text-primary">
+          🙍‍♂️ Danh sách khách hàng đang nợ
+        </h6>
+      </div>
+
+
+      <table className="table table-bordered table-striped table-sm text-center mb-3 border-warning">
+        <thead className="table-warning text-dark">
+          <tr>
+            <th>Khách hàng</th>
+            <th>Số đơn nợ</th>
+            <th>Tổng nợ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {debtCustomers.map((name) => {
+            // Lọc ra các đơn nợ của khách hàng này theo năm được chọn
+            const debtItems = data.filter((d) => {
+              const date = parseVNDate(d.thoigian);
+              if (!date) return false;
+              const year = date.getFullYear();
+              return (
+                year === selectedYear &&
+                d.name === name &&
+                d.thanhtoan === "Nợ"
+              );
+            });
+
+            if (debtItems.length === 0) return null;
+
+            const totalDebt = debtItems.reduce((sum, d) => {
+              const tien = typeof d.tien === "number" ? d.tien : parseInt(d.tien, 10) || 0;
+              return sum + tien;
+            }, 0);
+
+            return (
+              <tr key={name}>
+                {/* Khách hàng: căn trái */}
+                <td
+                  className="fw-bold text-start"
+                  style={{ color: "#76889cff" }}
+                >
+                  {name}
+                </td>
+
+
+                {/* Số đơn nợ: giữ căn giữa */}
+                <td className="text-center">{debtItems.length}</td>
+
+                {/* Tổng nợ: căn trái */}
+                <td className="text-danger text-end">
+                  {totalDebt.toLocaleString("vi-VN")} ₫
+                </td>
+              </tr>
+            );
+
+          })}
+        </tbody>
+      </table>
+
+
 
       <InfoModal show={showModal} title={modalTitle} message={modalMessage} onClose={() => setShowModal(false)} onConfirm={modalConfirm} />
 
