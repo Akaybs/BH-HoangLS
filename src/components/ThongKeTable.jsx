@@ -299,6 +299,18 @@ const ThongKeTable = ({ data, khachHangList }) => {
     });
   };
 
+  // 👉 Tạo danh sách khách hàng đã sắp xếp
+  const sortedKhachHang = [...khachHangList].sort((a, b) => {
+    const noA = unpaidCountMap[a.name] || 0;
+    const noB = unpaidCountMap[b.name] || 0;
+
+    // Ưu tiên khách có nợ > 0 lên đầu
+    if (noA > 0 && noB === 0) return -1;
+    if (noA === 0 && noB > 0) return 1;
+
+    // Nếu cùng trạng thái nợ thì sắp xếp theo tên A → Z
+    return a.name.localeCompare(b.name, "vi", { sensitivity: "base" });
+  });
 
   return (
     <div className="p-2">
@@ -392,7 +404,7 @@ const ThongKeTable = ({ data, khachHangList }) => {
         </div>
 
         <datalist id="datalist-khach">
-          {khachHangList.map((kh) => (
+          {sortedKhachHang.map((kh) => (
             <option key={kh.id} value={kh.name}>
               {unpaidCountMap[kh.name] > 0 ? `(${unpaidCountMap[kh.name]} nợ)` : ""}
             </option>
