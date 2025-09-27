@@ -248,7 +248,7 @@ const ThongKeTable = ({ data, khachHangList }) => {
     await batch.commit();
 
     const roitaiRef = collection(db, "roitai");
-    const nextId = await getNextRoiTaiId(db);
+    const nextId = await getSimpleNextId(db);
 
 
 
