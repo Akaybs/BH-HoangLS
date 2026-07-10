@@ -40,6 +40,7 @@ const FormNhapLieu = ({
     "iPhone 11",
     "iPhone XS Max",
     "iPhone XS",
+    "iPhone Xr",
     "iPhone X",
     "iPhone 8 PLus",
     "iPhone 8",
@@ -47,7 +48,7 @@ const FormNhapLieu = ({
     "iPhone 7",
     "iPhone 6S Plus",
     "iPhone 6s",
-    "iPhone 6",
+    
   ]);
 
   // "2025-08-08T21:00" -> "08/08/2025 21:00"

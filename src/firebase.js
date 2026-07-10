@@ -15,7 +15,16 @@ import {
 
 // Cấu hình Firebase
 // Your web app's Firebase configuration
-
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDrGFgsjC2dRMVB4StwAC5xPdmi71wOBFc",
+  authDomain: "hoangbhtn.firebaseapp.com",
+  databaseURL: "https://hoangbhtn-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hoangbhtn",
+  storageBucket: "hoangbhtn.firebasestorage.app",
+  messagingSenderId: "19332775533",
+  appId: "1:19332775533:web:bba03dc2753d2355c28964"
+};
 
 
 

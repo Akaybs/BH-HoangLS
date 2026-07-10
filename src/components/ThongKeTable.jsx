@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "../firebase";
+import WalletModal from "./WalletModal";
 import {
   doc,
   setDoc,
+  updateDoc,
   collection,
   getDocs,
   query,
+  where,
+  documentId,
   orderBy,
   limit,
   writeBatch
@@ -52,8 +56,10 @@ function InfoModal({ show, title, message, onClose, onConfirm }) {
   );
 }
 
-const ThongKeTable = ({ data, khachHangList }) => {
+const ThongKeTable = ({ data, khachHangList, setKhachHangList }) => {
   const [selectedKhach, setSelectedKhach] = useState("");
+  const [selectedKhachInfo, setSelectedKhachInfo] = useState(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
   const [filteredData, setFilteredData] = useState([]);
   const [partialPayment, setPartialPayment] = useState("");
   const [unpaidCountMap, setUnpaidCountMap] = useState({});
@@ -63,7 +69,192 @@ const ThongKeTable = ({ data, khachHangList }) => {
   const [modalConfirm, setModalConfirm] = useState(null);
 
   const [selectedDateOffset, setSelectedDateOffset] = useState(0);
+  const autoPayFromWallet = async (customer) => {
+    let wallet = Number(customer.wallet || 0);
 
+    // Chỉ lấy các đơn Nợ của đúng khách hàng
+const q = query(
+  collection(db, "roitai"),
+  where("name", "==", customer.name),
+  where("thanhtoan", "==", "Nợ"),
+  orderBy(documentId())
+);
+
+const snapshot = await getDocs(q);
+
+const debtList = snapshot.docs.map((d) => ({
+  id: d.id,
+  ref: d.ref,
+  ...d.data(),
+}));
+
+for (const item of debtList) {
+  const money = Number(item.tien || 0);
+
+  if (wallet >= money) {
+    wallet -= money;
+
+    await updateDoc(item.ref, {
+      thanhtoan: "Ví",
+    });
+  } else {
+    break;
+  }
+}
+
+    // cập nhật lại ví sau khi thanh toán
+    await updateDoc(doc(db, "dropkh", customer.id), {
+      wallet,
+    });
+
+    return wallet;
+  };
+
+  const handleWalletSave = async (money, note) => {
+  try {
+    if (!selectedKhachInfo) return;
+
+    if (money <= 0) {
+      alert("Vui lòng nhập số tiền lớn hơn 0!");
+      return;
+    }
+
+    // Tính số dư mới
+    const newWallet =
+      Number(selectedKhachInfo.wallet || 0) + Number(money);
+
+    // Lưu ví lên Firestore
+    await updateDoc(
+      doc(db, "dropkh", selectedKhachInfo.id),
+      {
+        wallet: newWallet,
+      }
+    );
+
+    // Cập nhật giao diện
+    setSelectedKhachInfo((prev) => ({
+      ...prev,
+      wallet: newWallet,
+    }));
+
+    setKhachHangList((prev) =>
+      prev.map((item) =>
+        item.id === selectedKhachInfo.id
+          ? {
+              ...item,
+              wallet: newWallet,
+            }
+          : item
+      )
+    );
+
+    // Đóng cửa sổ nạp tiền
+    setShowWalletModal(false);
+
+    // Hiện hộp thoại hỏi có thanh toán từ Ví không
+    setModalTitle("Nạp tiền thành công");
+
+    setModalMessage(`
+      <div class="text-start">
+        <p>✅ Đã nạp thành công:</p>
+
+        <h5 class="text-success">
+          ${Number(money).toLocaleString("vi-VN")} ₫
+        </h5>
+
+        <hr>
+
+        <p>Số dư Ví hiện tại:</p>
+
+        <h5 class="text-primary">
+          ${newWallet.toLocaleString("vi-VN")} ₫
+        </h5>
+
+        <hr>
+
+        <p>Bạn có muốn dùng số dư Ví để thanh toán các khoản nợ còn lại không?</p>
+      </div>
+    `);
+
+    // Khi bấm "Đồng ý"
+    setModalConfirm(() => () =>
+      executePayFromWallet({
+        ...selectedKhachInfo,
+        wallet: newWallet,
+      })
+    );
+
+    setShowModal(true);
+
+  } catch (error) {
+    console.error(error);
+    alert("Có lỗi khi nạp tiền!");
+  }
+};
+  const executePayFromWallet = async (customer) => {
+  try {
+    if (!customer) return;
+
+    const newWallet = await autoPayFromWallet(customer);
+
+    setSelectedKhachInfo((prev) => ({
+      ...prev,
+      wallet: newWallet,
+    }));
+
+    setKhachHangList((prev) =>
+      prev.map((item) =>
+        item.id === customer.id
+          ? { ...item, wallet: newWallet }
+          : item
+      )
+    );
+
+    setShowModal(false);
+
+    alert("Đã thanh toán từ Ví!");
+
+  } catch (err) {
+    console.error(err);
+    alert("Có lỗi khi thanh toán!");
+  }
+};
+
+const handlePayFromWallet = () => {
+
+  if (!selectedKhachInfo) return;
+
+  if ((selectedKhachInfo.wallet || 0) <= 0) {
+    alert("Ví không còn tiền!");
+    return;
+  }
+
+  setModalTitle("Thanh toán từ Ví");
+
+  setModalMessage(`
+    <div class="text-start">
+      <p>Bạn muốn dùng <strong>Ví</strong> để thanh toán các khoản nợ?</p>
+
+      <p>Khách hàng:
+      <strong class="text-primary">
+      ${selectedKhachInfo.name}
+      </strong></p>
+
+      <p>Số dư Ví:
+      <strong class="text-success">
+      ${(selectedKhachInfo.wallet || 0).toLocaleString("vi-VN")} ₫
+      </strong></p>
+    </div>
+  `);
+
+  setModalConfirm(() => () =>
+  executePayFromWallet(selectedKhachInfo)
+);
+
+  setShowModal(true);
+};
+
+  
   const currentDate = new Date();
   currentDate.setDate(currentDate.getDate() - selectedDateOffset);
   currentDate.setHours(0, 0, 0, 0);
@@ -77,9 +268,13 @@ const ThongKeTable = ({ data, khachHangList }) => {
   });
 
   const todayTotal = todayData.reduce((sum, d) => {
-    const tien = typeof d.tien === "number" ? d.tien : parseInt(d.tien, 10) || 0;
-    return sum + tien;
+    if (d.thanhtoan === "Ok" || d.thanhtoan === "Nợ" || d.thanhtoan === "Ví") {
+      const tien = typeof d.tien === "number" ? d.tien : parseInt(d.tien, 10) || 0;
+      return sum + tien;
+    }
+    return sum;
   }, 0);
+
 
   const todayNoCount = todayData.filter((d) => d.thanhtoan === "Nợ").length;
 
@@ -125,8 +320,15 @@ const ThongKeTable = ({ data, khachHangList }) => {
       const key = `${m}-${year}`;
       if (!stats[key]) stats[key] = { total: 0, no: 0 };
       const tien = typeof d.tien === "number" ? d.tien : parseInt(d.tien, 10) || 0;
-      stats[key].total += tien;
-      if (d.thanhtoan === "Nợ") stats[key].no += tien;
+      // ✅ Chỉ cộng tổng tiền nếu trạng thái là "Ok" hoặc "Nợ"
+      if (d.thanhtoan === "Ok" || d.thanhtoan === "Nợ" || d.thanhtoan === "Ví") {
+        stats[key].total += tien;
+      }
+
+      // ✅ Riêng phần "Nợ" giữ nguyên
+      if (d.thanhtoan === "Nợ") {
+        stats[key].no += tien;
+      }
     });
 
     return Object.entries(stats)
@@ -138,6 +340,17 @@ const ThongKeTable = ({ data, khachHangList }) => {
       .map(([month, { total, no }]) => ({ month, total, no }));
   }, [data, selectedYear]);
 
+  const yearTotal = useMemo(() => {
+    return monthStats.reduce(
+      (sum, item) => ({
+        total: sum.total + item.total,
+        no: sum.no + item.no,
+      }),
+      { total: 0, no: 0 }
+    );
+  }, [monthStats]);
+
+
   useEffect(() => {
     const counts = {};
     khachHangList.forEach((kh) => {
@@ -146,7 +359,15 @@ const ThongKeTable = ({ data, khachHangList }) => {
     });
     setUnpaidCountMap(counts);
   }, [data, khachHangList]);
+  useEffect(() => {
 
+    const kh = khachHangList.find(
+      item => item.name === selectedKhach
+    );
+
+    setSelectedKhachInfo(kh || null);
+
+  }, [selectedKhach, khachHangList]);
   useEffect(() => {
     const baseItems = selectedKhach
       ? data.filter((item) => item.name === selectedKhach && item.sms !== "Send")
@@ -155,7 +376,7 @@ const ThongKeTable = ({ data, khachHangList }) => {
   }, [selectedKhach, data]);
 
   const tongTien = filteredData.reduce((sum, item) => {
-    if (item.thanhtoan === "Ok" || item.thanhtoan === "Nợ") {
+    if (item.thanhtoan === "Ok" || item.thanhtoan === "Nợ" || item.thanhtoan === "Ví") {
       const tien = typeof item.tien === "number" ? item.tien : parseInt(item.tien, 10) || 0;
       return sum + tien;
     }
@@ -291,7 +512,10 @@ const ThongKeTable = ({ data, khachHangList }) => {
 
   const handleExportImage = async () => {
     if (!printRef.current) return;
-    const canvas = await html2canvas(printRef.current);
+    const canvas = await html2canvas(printRef.current, {
+      scale: 3, // chất lượng cao hơn (thử 3 nếu muốn nét hơn nữa)
+      useCORS: true
+    });
     canvas.toBlob((blob) => {
       if (blob) {
         saveAs(blob, `cong-no-${selectedKhach}.png`);
@@ -412,12 +636,45 @@ const ThongKeTable = ({ data, khachHangList }) => {
         </datalist>
       </div>
 
-      <p>🙍‍♂️ <span className="text-secondary">Công nợ của:</span> <strong className="text-primary">{selectedKhach || "Tất cả"}</strong>
+      <p>🙍‍♂️ <span className="text-secondary">Công nợ:  </span>
+
+        <strong className="text-primary">{selectedKhach || "Tất cả"}</strong>
         {selectedKhach && unpaidCountMap[selectedKhach] !== undefined && (
           <span className="ms-2 text-muted">({unpaidCountMap[selectedKhach]} nợ)</span>
         )}
       </p>
+      {selectedKhachInfo && (
+        <div className="d-flex align-items-center justify-content-between mb-2">
+          <div>
+            💳 Ví:
+            <strong className="text-success ms-2">
+              {(selectedKhachInfo.wallet || 0).toLocaleString("vi-VN")} ₫
+            </strong>
+          </div>
 
+          <div className="d-flex gap-2">
+
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={handlePayFromWallet}
+              disabled={
+                (selectedKhachInfo.wallet || 0) <= 0 ||
+                tongNo <= 0
+              }
+            >
+              💳 T.T từ Ví
+            </button>
+
+            <button
+              className="btn btn-sm btn-success"
+              onClick={() => setShowWalletModal(true)}
+            >
+              💰 Nạp tiền
+            </button>
+
+          </div>
+        </div>
+      )}
       <p>💰 <span className="text-success">Tổng tiền:</span> <strong className="text-success">{tongTien > 0 ? `${tongTien.toLocaleString()} ₫` : "0 ₫"}</strong></p>
       <p>🏷️ <span className="text-danger">Tổng Nợ:</span> <strong className="text-danger">{tongNo > 0 ? `${tongNo.toLocaleString()} ₫` : "0 ₫"}</strong></p>
 
@@ -435,6 +692,7 @@ const ThongKeTable = ({ data, khachHangList }) => {
           <button className="btn btn-sm btn-info" onClick={handleExportImage}>
             📷 Xuất ảnh
           </button>
+
         </div>
       )}
 
@@ -464,11 +722,27 @@ const ThongKeTable = ({ data, khachHangList }) => {
           {monthStats.map((m) => (
             <tr key={m.month}>
               <td className="fw-bold text-info">{m.month}</td>
-              <td className="text-success">{m.total.toLocaleString("vi-VN")} ₫</td>
-              <td className="text-danger">{m.no.toLocaleString("vi-VN")} ₫</td>
+              <td className="text-success">
+                {m.total.toLocaleString("vi-VN")} ₫
+              </td>
+              <td className="text-danger">
+                {m.no.toLocaleString("vi-VN")} ₫
+              </td>
             </tr>
           ))}
+
+          {/* Tổng của năm */}
+          <tr className="table-warning fw-bold">
+            <td>Tổng {selectedYear}</td>
+            <td className="text-success">
+              {yearTotal.total.toLocaleString("vi-VN")} ₫
+            </td>
+            <td className="text-danger">
+              {yearTotal.no.toLocaleString("vi-VN")} ₫
+            </td>
+          </tr>
         </tbody>
+
       </table>
 
       {/* Danh sách khách hàng đang nợ theo tháng */}
@@ -539,7 +813,12 @@ const ThongKeTable = ({ data, khachHangList }) => {
 
 
       <InfoModal show={showModal} title={modalTitle} message={modalMessage} onClose={() => setShowModal(false)} onConfirm={modalConfirm} />
-
+      <WalletModal
+        show={showWalletModal}
+        customer={selectedKhachInfo}
+        onClose={() => setShowWalletModal(false)}
+        onSave={handleWalletSave}
+      />
       <div style={{ position: 'absolute', top: -9999, left: -9999 }}>
         <div
           ref={printRef}

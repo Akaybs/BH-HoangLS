@@ -14,6 +14,7 @@ import {
   collection,
   setDoc,
   getDocs,
+  getDoc,
   doc,
   deleteDoc,
   onSnapshot,
@@ -81,21 +82,20 @@ const FormInputData = () => {
   const [khachHangList, setKhachHangList] = useState([]);
 
   useEffect(() => {
-    const fetchDropKH = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "dropkh"));
-        const khachHang = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setKhachHangList(khachHang);
-      } catch (error) {
-        console.error("Lỗi khi lấy danh sách khách hàng từ dropkh:", error);
-      }
-    };
+  const unsubscribe = onSnapshot(
+    collection(db, "dropkh"),
+    (snapshot) => {
+      const khachHang = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-    fetchDropKH();
-  }, []);
+      setKhachHangList(khachHang);
+    }
+  );
+
+  return () => unsubscribe();
+}, []);
 
 
 
@@ -222,7 +222,29 @@ const FormInputData = () => {
   const handleAddData = async () => {
   try {
     const nextId = await getSimpleNextId(db);   // ✅ dùng hàm mới
+// ======================
+// Kiểm tra thanh toán bằng Ví
+// ======================
+let paymentStatus = form.thanhtoan;
 
+if (paymentStatus === "Nợ") {
+  const customer = khachHangList.find(
+    (item) => item.name === form.name
+  );
+
+  if (customer) {
+    const wallet = Number(customer.wallet || 0);
+    const repairCost = Number(form.tien || 0);
+
+    if (wallet >= repairCost) {
+      await updateDoc(doc(db, "dropkh", customer.id), {
+        wallet: wallet - repairCost,
+      });
+
+      paymentStatus = "Ví";
+    }
+  }
+}
     // ✅ Chuyển định dạng thời gian từ yyyy-MM-ddTHH:mm sang dd/MM/yyyy HH:mm
     let formattedTime = form.thoigian;
     if (form.thoigian && form.thoigian.includes("T")) {
@@ -232,10 +254,11 @@ const FormInputData = () => {
     }
 
     await setDoc(doc(roitaiRef, nextId.toString()), {
-      ...form,
-      thoigian: formattedTime,
-      sms: form.sms || "Yes"
-    });
+    ...form,
+    thanhtoan: paymentStatus,
+    thoigian: formattedTime,
+    sms: form.sms || "Yes"
+});
 
     // ✅ Reset lại form và set lại thời gian hiện tại
     const now = new Date();
@@ -336,7 +359,7 @@ const FormInputData = () => {
 
             {hienThongKe && (
               <div className="card-body p-2">
-                <ThongKeTable data={data} khachHangList={khachHangList} />
+                <ThongKeTable data={data} khachHangList={khachHangList} setKhachHangList={setKhachHangList} />
               </div>
             )}
           </div>

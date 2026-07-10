@@ -43,6 +43,10 @@
  /* font-weight: bold; */
 }
 
+.text-wallet {
+    color: rgb(1, 250, 76) !important;
+}
+
 .text-tratien {
   color: rgb(8, 4, 230);
  /* font-weight: bold; */

@@ -158,6 +158,7 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
                 <td>{row.iphone}</td>
                 <td className="d-none d-sm-table-cell">{row.loi}</td>
                 <td className="d-none d-md-table-cell">{row.imei}</td>
+                
                 <td
                   className={
                     (row.thanhtoan === "Ok"
@@ -166,8 +167,11 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
                       ? "text-danger"
                       : row.thanhtoan === "Back"
                       ? "text-back"
+                      : row.thanhtoan === "Ví"
+                      ? "text-wallet"
                       : row.thanhtoan === "TT"
                       ? "text-tratien"
+                      
                       : "") + " text-center"
                   }
                 >
