@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import formatDisplayTime from "../utils/formatDisplayTime";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function ConfirmModal({ show, title, message, onClose, onConfirm }) {
@@ -8,9 +7,27 @@ function ConfirmModal({ show, title, message, onClose, onConfirm }) {
   return (
     <div
       className="modal fade show"
-      style={{ display: "block", background: "rgba(0,0,0,0.5)" }}
+      style={{
+        display: "block",
+        position: "fixed",
+        inset: 0,
+        zIndex: 1045,
+        overflowY: "auto",
+        padding: "1rem",
+      }}
     >
-      <div className="modal-dialog modal-dialog-centered">
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(0,0,0,0.32)",
+          opacity: 1,
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          zIndex: 1040,
+        }}
+      />
+      <div className="modal-dialog modal-dialog-centered" style={{ position: "relative", zIndex: 1050 }}>
         <div className="modal-content shadow-lg">
           <div className="modal-header bg-primary text-white">
             <h5 className="modal-title">{title || "Xác nhận"}</h5>
@@ -37,39 +54,73 @@ function ConfirmModal({ show, title, message, onClose, onConfirm }) {
   );
 }
 
-const TableHeader = ({ filterText, setFilterText }) => (
-  <div className="row mb-3 align-items-center gx-2">
-    <div className="col-md-3 col-sm-12 position-relative">
-      <input
-        type="text"
-        className="form-control pe-5 fs-6"
-        placeholder="Tìm kiếm theo ID, Tên, IMEI, Lỗi..."
-        value={filterText}
-        onChange={(e) => setFilterText(e.target.value)}
-        style={{ border: "2px solid #ccc", borderRadius: "8px" }}
-      />
-      {filterText && (
-        <button
-          type="button"
-          onClick={() => setFilterText("")}
-          className="btn btn-sm position-absolute end-0 top-50 translate-middle-y me-2 border-0 bg-transparent text-secondary"
-          style={{ zIndex: 2 }}
-          aria-label="Xóa tìm kiếm"
-        >
-          <i className="bi bi-x-circle-fill fs-3"></i>
-        </button>
-      )}
-    </div>
+const getSmsBadge = (sms) => {
+  if (!sms) return <span className="badge bg-secondary">Chưa gửi</span>;
+  if (sms === "Yes") return <span className="badge bg-warning text-dark">Chờ gửi</span>;
+  if (sms === "Send") return <span className="badge bg-info text-dark">Đã gửi</span>;
+  if (sms === "Done" || sms === "sent") return <span className="badge bg-success">Thành công</span>;
+  if (sms === "Error" || sms === "error") return <span className="badge bg-danger">Lỗi</span>;
+  return <span className="badge bg-secondary">{sms}</span>;
+};
 
-    <div className="col-md-5 col-sm-3 mt-0">
-      <h4 className="text-center fw-bold text-danger my-3">
-        📋 Danh Sách Bảo Hành
-      </h4>
+const TableHeader = ({
+  filterText,
+  setFilterText,
+  onAdd,
+  onOpenThongKe,
+  onOpenDropdown,
+  onOpenSmsCompose,
+}) => (
+  <div className="row mb-3 align-items-center gx-2">
+    <h4 className="text-danger fw-bold text-center mb-0">📋 DANH SÁCH BẢO HÀNH
+    </h4>
+    <div className="col-12 col-lg-8">
+       
+      <div className="d-flex flex-column flex-md-row flex-wrap gap-2 align-items-center justify-content-start">
+       
+        <div className="d-flex flex-wrap gap-2">
+          <button className="btn btn-primary btn-sm" onClick={(e) => onAdd && onAdd(e)}>
+            ➕ Thêm
+          </button>
+          <button className="btn btn-info btn-sm text-white" onClick={onOpenThongKe}>
+            📊 Thống kê
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={onOpenDropdown}>
+            ⚙️ Tùy Chỉnh
+          </button>
+          <button className="btn btn-success btn-sm" onClick={onOpenSmsCompose}>
+            ✉️ Soạn tin SMS
+          </button>
+        </div>
+      </div>
+    </div>
+    <div className="col-12 col-lg-4 d-flex justify-content-lg-end mt-2 mt-lg-0">
+      <div className="position-relative w-100" style={{ maxWidth: "360px" }}>
+        <input
+          type="text"
+          className="form-control pe-5 fs-6"
+          placeholder="Tìm kiếm theo ID, Tên, IMEI, Lỗi..."
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          style={{ border: "2px solid #ccc", borderRadius: "8px" }}
+        />
+        {filterText && (
+          <button
+            type="button"
+            onClick={() => setFilterText("")}
+            className="btn btn-sm position-absolute end-0 top-50 translate-middle-y me-2 border-0 bg-transparent text-secondary"
+            style={{ zIndex: 2 }}
+            aria-label="Xóa tìm kiếm"
+          >
+            <i className="bi bi-x-circle-fill fs-3"></i>
+          </button>
+        )}
+      </div>
     </div>
   </div>
 );
 
-const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
+const RoiTaiTable = ({ data, onEdit, onDelete, onAdd, onOpenThongKe, onOpenDropdown, onOpenSmsCompose }) => {
   const [filterText, setFilterText] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -128,7 +179,14 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
 
   return (
     <div className="container-fluid">
-      <TableHeader filterText={filterText} setFilterText={setFilterText} />
+      <TableHeader
+        filterText={filterText}
+        setFilterText={setFilterText}
+        onAdd={onAdd}
+        onOpenThongKe={onOpenThongKe}
+        onOpenDropdown={onOpenDropdown}
+        onOpenSmsCompose={onOpenSmsCompose}
+      />
 
       <div className="table-responsive">
         <table className="table table-bordered table-hover align-middle">
@@ -187,7 +245,7 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
                   {row.thoigian}
                 </td>
                 <td className="d-none d-lg-table-cell text-center">
-                  {row.sms}
+                  {getSmsBadge(row.sms)}
                 </td>
                 <td className="text-center">
                   <button
@@ -306,9 +364,26 @@ const RoiTaiTable = ({ data, onEdit, onDelete, editId, handleAddData }) => {
       {detailRow && (
         <div
           className="modal fade show"
-          style={{ display: "block", background: "rgba(0,0,0,0.5)" }}
+          style={{
+            display: "block",
+            position: "fixed",
+            inset: 0,
+            zIndex: 1045,
+            overflowY: "auto",
+            padding: "1rem",
+          }}
         >
-          <div className="modal-dialog modal-dialog-centered">
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.78)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              zIndex: 1040,
+            }}
+          />
+          <div className="modal-dialog modal-dialog-centered" style={{ position: "relative", zIndex: 1050 }}>
             <div className="modal-content shadow-lg">
               <div className="modal-header bg-info text-white">
                 <h5 className="modal-title">📋 Chi tiết bảo hành</h5>

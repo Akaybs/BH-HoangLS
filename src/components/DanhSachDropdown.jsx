@@ -107,118 +107,115 @@ const DanhSachDropdown = ({ khachHangList, setKhachHangList, benhList, setBenhLi
     // 👉 Return giữ nguyên như bạn gửi
     return (
         <div className="card mt-3 shadow-sm">
+            <div className="row g-3 p-3">
+                <div className="col-12 col-xl-6">
+                    <div className="border rounded p-3 h-100">
+                        <h6>👤 Khách Hàng</h6>
 
-            {/* KHÁCH HÀNG */}
-            <div className="mb-3 p-3">
-                <h6>👤 Khách Hàng</h6>
+                        <div className="mb-2">
+                            <input
+                                className="form-control"
+                                placeholder="Tên khách hàng"
+                                value={newKhach}
+                                onChange={(e) => setNewKhach(e.target.value)}
+                            />
+                        </div>
 
-                {/* Tên khách hàng trên đầu */}
-                <div className="mb-2">
-                    <input
-                        className="form-control"
-                        placeholder="Tên khách hàng"
-                        value={newKhach}
-                        onChange={(e) => setNewKhach(e.target.value)}
-                    />
-                </div>
+                        <div className="d-flex gap-2 mb-3">
+                            <input
+                                className="form-control"
+                                placeholder="Số điện thoại"
+                                value={newPhone}
+                                onChange={(e) => setNewPhone(e.target.value)}
+                                style={{ flex: "1 1 50%" }}
+                            />
+                            <input
+                                className="form-control"
+                                placeholder="Mật khẩu"
+                                value={newPass}
+                                onChange={(e) => setNewPass(e.target.value)}
+                                style={{ flex: "1 1 40%" }}
+                            />
+                            <button className="btn btn-success" onClick={handleAddKhach}>Thêm</button>
+                        </div>
 
-                {/* Hàng ngang: Số điện thoại + Mật khẩu + nút Thêm */}
-                <div className="d-flex gap-2 mb-3">
-                    <input
-                        className="form-control"
-                        placeholder="Số điện thoại"
-                        value={newPhone}
-                        onChange={(e) => setNewPhone(e.target.value)}
-                        style={{ flex: "1 1 50%" }}
-                    />
-                    <input
-                        className="form-control"
-                        placeholder="Mật khẩu"
-                        value={newPass}
-                        onChange={(e) => setNewPass(e.target.value)}
-                        style={{ flex: "1 1 40%" }}
-                    />
-                    <button className="btn btn-success" onClick={handleAddKhach}>Thêm</button>
-                </div>
-
-                <ul className="list-group">
-                    {khachHangList.map((khach) => (
-                        <li key={khach.id} className="list-group-item">
-                            {editingId === khach.id ? (
-                                <>
-                                    {/* Khi đang sửa: tên trên đầu */}
-                                    <div className="mb-2">
-                                        <input
-                                            className="form-control"
-                                            value={editName}
-                                            onChange={(e) => setEditName(e.target.value)}
-                                            placeholder="Tên khách hàng"
-                                        />
-                                    </div>
-                                    {/* Hàng ngang khi sửa: phone + pass + Lưu/Hủy */}
-                                    <div className="d-flex gap-2 mb-2">
-                                        <input
-                                            className="form-control"
-                                            value={editPhone}
-                                            onChange={(e) => setEditPhone(e.target.value)}
-                                            placeholder="Số điện thoại"
-                                            style={{ flex: "1 1 50%" }}
-                                        />
-                                        <input
-                                            className="form-control"
-                                            value={editPass}
-                                            onChange={(e) => setEditPass(e.target.value)}
-                                            placeholder="Mật khẩu"
-                                            style={{ flex: "1 1 40%" }}
-                                        />
-                                        <button className="btn btn-primary" onClick={handleSaveEdit}>Lưu</button>
-                                        <button className="btn btn-secondary" onClick={() => setEditingId(null)}>Hủy</button>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>{khach.name}</strong>
-                                        <div className="small text-muted">
-                                            ({khach.phone}) — Pass: <span>{khach.pass}</span>
+                        <ul className="list-group">
+                            {khachHangList.map((khach) => (
+                                <li key={khach.id} className="list-group-item">
+                                    {editingId === khach.id ? (
+                                        <>
+                                            <div className="mb-2">
+                                                <input
+                                                    className="form-control"
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    placeholder="Tên khách hàng"
+                                                />
+                                            </div>
+                                            <div className="d-flex gap-2 mb-2">
+                                                <input
+                                                    className="form-control"
+                                                    value={editPhone}
+                                                    onChange={(e) => setEditPhone(e.target.value)}
+                                                    placeholder="Số điện thoại"
+                                                    style={{ flex: "1 1 50%" }}
+                                                />
+                                                <input
+                                                    className="form-control"
+                                                    value={editPass}
+                                                    onChange={(e) => setEditPass(e.target.value)}
+                                                    placeholder="Mật khẩu"
+                                                    style={{ flex: "1 1 40%" }}
+                                                />
+                                                <button className="btn btn-primary" onClick={handleSaveEdit}>Lưu</button>
+                                                <button className="btn btn-secondary" onClick={() => setEditingId(null)}>Hủy</button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{khach.name}</strong>
+                                                <div className="small text-muted">
+                                                    ({khach.phone}) — Pass: <span>{khach.pass}</span>
+                                                </div>
+                                            </div>
+                                            <div className="d-flex gap-2">
+                                                <button className="btn btn-sm btn-warning" onClick={() => handleEditKhach(khach)}>Sửa</button>
+                                                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteKhach(khach.id)}>Xóa</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="d-flex gap-2">
-                                        <button className="btn btn-sm btn-warning" onClick={() => handleEditKhach(khach)}>Sửa</button>
-                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteKhach(khach.id)}>Xóa</button>
-                                    </div>
-                                </div>
-                            )}
-                        </li>
-                    ))}
-                </ul>
-            </div>
-
-            {/* LỖI / TÌNH TRẠNG */}
-            <div className="p-3">
-                <h6>⚠️ Lỗi / Tình trạng</h6>
-
-                {/* Ô nhập + nút thêm */}
-                <div className="d-flex gap-2 mb-2">
-                    <input
-                        className="form-control"
-                        placeholder="Nhập lỗi mới..."
-                        value={newBenh}
-                        onChange={(e) => setNewBenh(e.target.value)}
-                    />
-                    <button className="btn btn-success" onClick={handleAddBenh}>Thêm</button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 </div>
 
-                <ul className="list-group">
-                    {benhList.map((benh) => (
-                        <li key={benh.id} className="list-group-item d-flex justify-content-between align-items-center">
-                            {benh.ten}
-                            <button className="btn btn-sm btn-danger" onClick={() => handleDeleteBenh(benh.id)}>Xóa</button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
+                <div className="col-12 col-xl-6">
+                    <div className="border rounded p-3 h-100">
+                        <h6>⚠️ Lỗi / Tình trạng</h6>
 
+                        <div className="d-flex gap-2 mb-2">
+                            <input
+                                className="form-control"
+                                placeholder="Nhập lỗi mới..."
+                                value={newBenh}
+                                onChange={(e) => setNewBenh(e.target.value)}
+                            />
+                            <button className="btn btn-success" onClick={handleAddBenh}>Thêm</button>
+                        </div>
+
+                        <ul className="list-group">
+                            {benhList.map((benh) => (
+                                <li key={benh.id} className="list-group-item d-flex justify-content-between align-items-center">
+                                    {benh.ten}
+                                    <button className="btn btn-sm btn-danger" onClick={() => handleDeleteBenh(benh.id)}>Xóa</button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

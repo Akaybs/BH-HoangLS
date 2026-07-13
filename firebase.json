@@ -15,5 +15,15 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "functions": {
+    "source": "functions"
+  }
+  ,
+  "emulators": {
+    "functions": { "port": 5005 },
+    "firestore": { "port": 8081 },
+    "database": { "port": 9001 },
+    "ui": { "enabled": true, "port": 4000 }
   }
 }

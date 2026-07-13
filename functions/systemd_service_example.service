@@ -1,0 +1,16 @@
+[Unit]
+Description=SMS Worker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/youruser/functions
+ExecStart=/usr/bin/node smsWorkerSample.js
+Restart=on-failure
+RestartSec=5
+Environment="GOOGLE_APPLICATION_CREDENTIALS=/home/youruser/creds.json"
+Environment="SMS_PROVIDER_URL=https://your-sms-provider.example/send"
+Environment="SMS_PROVIDER_API_KEY=your_api_key"
+
+[Install]
+WantedBy=multi-user.target

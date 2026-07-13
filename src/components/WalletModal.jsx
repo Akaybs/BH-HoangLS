@@ -37,11 +37,16 @@ function WalletModal({
             className="modal fade show"
             style={{
                 display: "block",
-                background: "rgba(0,0,0,.5)"
+                position: "fixed",
+                inset: 0,
+                zIndex: 1045,
+                overflowY: "auto",
+                padding: "1rem",
             }}
         >
+            <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.32)", opacity: 1, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", zIndex: 1040 }} />
 
-            <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-dialog modal-dialog-centered" style={{ position: "relative", zIndex: 1050 }}>
 
                 <div className="modal-content">
 

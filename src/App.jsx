@@ -20,12 +20,6 @@ const App = () => {
     }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setPassword('');
-    setError('');
-  };
-
   return (
     <div className=" d-flex justify-content-center align-items-center bg-light">
       {isAuthenticated ? (

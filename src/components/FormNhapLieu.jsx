@@ -83,6 +83,22 @@ const FormNhapLieu = ({
   const [autoUpdate, setAutoUpdate] = useState(true);
   const intervalRef = useRef(null);
 
+  const resetForm = () => {
+    setForm({
+      sms: "Yes",
+      thanhtoan: "Nợ",
+      thoigian: getNowFormatted(),
+      tien: 0,
+      tienText: "",
+      name: "",
+      iphone: "",
+      loi: "",
+      imei: "",
+      phone: "",
+    });
+    setAutoUpdate(false);
+  };
+
   // Auto cập nhật Thời Gian mỗi phút
   useEffect(() => {
     if (autoUpdate) {
@@ -114,13 +130,13 @@ const FormNhapLieu = ({
     } else {
       setAutoUpdate(true);  // Thêm mới => bật lại auto-update
     }
-  }, [form && form.id]);
+  }, [form]);
 
   return (
     <div className="card-body">
-      <div className="mb-2 d-flex gap-2">
+      <div className="row g-2 mb-2">
         {/* Khách Hàng */}
-        <div className="w-70">
+        <div className="col-12 col-md-8">
           <label className="form-label">Khách Hàng</label>
           <div style={{ position: "relative" }}>
             <input
@@ -134,7 +150,7 @@ const FormNhapLieu = ({
             {form.name && (
               <button
                 type="button"
-                className="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y me-2"
+                className="btn btn-sm btn-light form-clear-btn position-absolute top-50 end-0 translate-middle-y me-2"
                 onClick={() => setForm((prev) => ({ ...prev, name: "" }))}
                 style={{ zIndex: 2 }}
               >
@@ -157,7 +173,7 @@ const FormNhapLieu = ({
         </div>
 
         {/* Tên Máy */}
-        <div className="w-30">
+        <div className="col-12 col-md-4">
           <label className="form-label">Tên Máy</label>
           <div style={{ position: "relative" }}>
             <input
@@ -171,7 +187,7 @@ const FormNhapLieu = ({
             {form.iphone && (
               <button
                 type="button"
-                className="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y me-2"
+                className="btn btn-sm btn-light form-clear-btn position-absolute top-50 end-0 translate-middle-y me-2"
                 onClick={() => setForm((prev) => ({ ...prev, iphone: "" }))}
                 style={{ zIndex: 2 }}
               >
@@ -188,9 +204,9 @@ const FormNhapLieu = ({
         </div>
       </div>
 
-      <div className="mb-2 d-flex gap-2">
+      <div className="row g-2 mb-2">
         {/* Tình Trạng */}
-        <div className="w-75">
+        <div className="col-12 col-md-8">
           <label className="form-label">Tình Trạng</label>
           <div style={{ position: "relative" }}>
             <input
@@ -204,7 +220,7 @@ const FormNhapLieu = ({
             {form.loi && (
               <button
                 type="button"
-                className="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y me-2"
+                className="btn btn-sm btn-light form-clear-btn position-absolute top-50 end-0 translate-middle-y me-2"
                 onClick={() => setForm((prev) => ({ ...prev, loi: "" }))}
                 style={{ zIndex: 2 }}
               >
@@ -225,7 +241,7 @@ const FormNhapLieu = ({
         </div>
 
         {/* IMEI */}
-        <div className="w-25">
+        <div className="col-12 col-md-4">
           <label className="form-label">IMEI</label>
           <div style={{ position: "relative" }}>
             <input
@@ -237,27 +253,29 @@ const FormNhapLieu = ({
               onChange={handleChange}
               onFocus={() => setShowKeyboard(true)}
             />
+            {showKeyboard && (
+              <div
+                ref={keyboardRef}
+                style={{
+                  position: "absolute",
+                  top: "12%",
+                  right: "100%",
+                  transform: "translateY(-50%)",
+                  zIndex: 20,
+                  marginRight: "8px",
+                  width: "auto",
+                }}
+              >
+                <VirtualKeyboard onKeyPress={handleVirtualKeyPress} />
+              </div>
+            )}
           </div>
         </div>
-
-        {showKeyboard && (
-          <div
-            ref={keyboardRef}
-            style={{
-              position: "absolute",
-              top: "14%",
-              left: "44%",
-              zIndex: 10,
-            }}
-          >
-            <VirtualKeyboard onKeyPress={handleVirtualKeyPress} />
-          </div>
-        )}
       </div>
 
-      <div className="mb-2 d-flex gap-2">
+      <div className="row g-2 mb-2">
         {/* Thành tiền */}
-        <div className="w-50">
+        <div className="col-12 col-md-6">
           <label className="form-label">T.Tiền</label>
           <div style={{ position: "relative" }}>
             <input
@@ -280,7 +298,7 @@ const FormNhapLieu = ({
             {form.tienText && (
               <button
                 type="button"
-                className="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y me-2"
+                className="btn btn-sm btn-light form-clear-btn position-absolute top-50 end-0 translate-middle-y me-2"
                 onClick={() =>
                   setForm((prev) => ({
                     ...prev,
@@ -306,74 +324,76 @@ const FormNhapLieu = ({
         </div>
 
         {/* Thanh toán */}
-        <div className="col-3">
+        <div className="col-12 col-md-3">
           <label className="form-label">T.Toán</label>
-          <div style={{ position: "relative" }}>
-            <input
-              className="form-control pe-5"
-              name="thanhtoan"
-              list="toanOptions"
-              onChange={handleChange}
-              value={form.thanhtoan || ""} // mặc định "Nợ"
-              autoComplete="off"
-            />
-            {form.thanhtoan && (
-              <button
-                type="button"
-                className="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y me-2"
-                onClick={() =>
-                  handleChange({ target: { name: "thanhtoan", value: "" } })
-                }
-                style={{ zIndex: 2 }}
-              >
-                ❌
-              </button>
-            )}
-            <datalist id="toanOptions">
-              {dropToan.map((item, index) => (
-                <option key={index} value={item} />
-              ))}
-            </datalist>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
+              border: "1px solid #ced4da",
+              borderRadius: "10px",
+              background: form.thanhtoan === "Nợ" ? "#fff3cd" : form.thanhtoan === "Ok" ? "#e8f5e9" : form.thanhtoan === "Back" ? "#f3e5f5" : "#f8f9fa",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+            onClick={() => {
+              const options = ["Nợ", "Ok", "Back"];
+              const currentIndex = options.indexOf(form.thanhtoan || "Nợ");
+              const nextValue = options[(currentIndex + 1) % options.length];
+              handleChange({ target: { name: "thanhtoan", value: nextValue } });
+            }}
+          >
+            <span
+              style={{
+                fontSize: "1rem",
+                fontWeight: 600,
+                color:
+                  form.thanhtoan === "Nợ"
+                    ? "#bd0000"
+                    : form.thanhtoan === "Ok"
+                    ? "#2e7d32"
+                    : form.thanhtoan === "Back"
+                    ? "#6a1b9a"
+                    : "#6c757d",
+              }}
+            >
+              {form.thanhtoan || "Nợ"}
+            </span>
           </div>
         </div>
 
         {/* SMS */}
-        <div className="col-3">
+        <div className="col-12 col-md-3">
           <label className="form-label">SMS</label>
-          <div style={{ position: "relative" }}>
-            <input
-              className="form-control pe-5"
-              name="sms"
-              list="smsOptions"
-              onChange={handleChange}
-              value={form.sms || ""} // mặc định "Yes"
-              autoComplete="off"
-            />
-            {form.sms && (
-              <button
-                type="button"
-                className="btn btn-sm btn-light position-absolute top-50 end-0 translate-middle-y me-2"
-                onClick={() =>
-                  handleChange({ target: { name: "sms", value: "" } })
-                }
-                style={{ zIndex: 2 }}
-              >
-                ❌
-              </button>
-            )}
-            <datalist id="smsOptions">
-              <option value="Yes" />
-              <option value="No" />
-              <option value="TT" />
-              <option value="Done" />
-            </datalist>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
+              border: "1px solid #ced4da",
+              borderRadius: "10px",
+              background: form.sms === "Yes" ? "#e8f5e9" : "#f8f9fa",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+            onClick={() => {
+              const nextValue = form.sms === "Yes" ? "No" : "Yes";
+              handleChange({ target: { name: "sms", value: nextValue } });
+            }}
+          >
+            <span style={{ fontSize: "1.1rem", fontWeight: 600, color: form.sms === "Yes" ? "#2e7d32" : "#6c757d" }}>
+              {form.sms === "Yes" ? "✅ Yes" : "❌ No"}
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="mb-3 d-flex gap-2">
+      <div className="row g-2 mb-3">
         {/* Phone */}
-        <div className="w-50">
+        <div className="col-12 col-md-6">
           <label className="form-label">Phone</label>
           <input
             className="form-control"
@@ -385,11 +405,11 @@ const FormNhapLieu = ({
         </div>
 
         {/* Thời gian */}
-        <div className="w-50 position-relative">
+        <div className="col-12 col-md-6 position-relative">
           <label className="form-label">Thời Gian</label>
           <input
             className="form-control pe-5"
-            style={{ maxWidth: "220px" }}
+            style={{ width: "100%" }}
             type="datetime-local"
             required
             name="thoigian"
@@ -423,9 +443,9 @@ const FormNhapLieu = ({
         </div>
       </div>
 
-      <div className="d-grid gap-2">
+      <div className="form-action-row" style={{ gridTemplateColumns: "3fr 1fr" }}>
         <button
-          className="btn btn-success"
+          className="btn btn-success form-action-btn"
           onClick={() => {
             if (!form.thoigian || form.thoigian.trim() === "") {
               alert("⏰ Vui lòng nhập Thời Gian!");
@@ -451,12 +471,8 @@ const FormNhapLieu = ({
         </button>
 
         <button
-          className="btn btn-outline-secondary"
-          onClick={() => {
-            setForm({ sms: "Yes", thanhtoan: "Nợ", thoigian: getNowFormatted() });
-            setAutoUpdate(false); // bật lại auto-update khi reset form
-          }}
-
+          className="btn btn-outline-secondary form-action-btn"
+          onClick={resetForm}
         >
           🧹 Xóa Form
         </button>

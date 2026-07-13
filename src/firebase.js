@@ -16,14 +16,16 @@ import {
 // Cấu hình Firebase
 // Your web app's Firebase configuration
 // Your web app's Firebase configuration
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDrGFgsjC2dRMVB4StwAC5xPdmi71wOBFc",
-  authDomain: "hoangbhtn.firebaseapp.com",
-  databaseURL: "https://hoangbhtn-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "hoangbhtn",
-  storageBucket: "hoangbhtn.firebasestorage.app",
-  messagingSenderId: "19332775533",
-  appId: "1:19332775533:web:bba03dc2753d2355c28964"
+  apiKey: "AIzaSyD-f2CMpJkrXrjttgoPAouLPQon4jd5PWE",
+  authDomain: "hoanglsls.firebaseapp.com",
+  databaseURL: "https://hoanglsls-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "hoanglsls",
+  storageBucket: "hoanglsls.firebasestorage.app",
+  messagingSenderId: "372270820186",
+  appId: "1:372270820186:web:a38eb86172e63d0266e163",
+  measurementId: "G-47DYM0JKT7"
 };
 
 

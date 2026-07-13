@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "../firebase";
 import "./input.css";
 import VirtualKeyboard from "./VirtualKeyboard"; // đường dẫn đúng với nơi bạn đặt file
@@ -6,7 +6,10 @@ import RoiTaiTable from "./RoiTaiTable";
 import FormNhapLieu from "./FormNhapLieu";
 import ThongKeTable from "./ThongKeTable";
 import DanhSachDropdown from "./DanhSachDropdown";
+import SmsHistoryTable from "./SmsHistoryTable";
+import SmsComposeBox from "./SmsComposeBox";
 import { getSimpleNextId } from "../utils/getSimpleNextId";
+import { recordWalletHistory } from "../utils/walletPaymentUtils";
 
 
 
@@ -14,7 +17,6 @@ import {
   collection,
   setDoc,
   getDocs,
-  getDoc,
   doc,
   deleteDoc,
   onSnapshot,
@@ -34,35 +36,34 @@ const formatCurrency = (value) => {
   return value.toLocaleString("vi-VN") + " ₫";
 };
 
-const formatDisplayTime = (datetimeValue) => {
-  if (!datetimeValue) return "";
-  const date = new Date(datetimeValue);
-  if (isNaN(date)) return datetimeValue; // fallback nếu không phải ISO format
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yyyy = date.getFullYear();
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+const getDefaultFormState = () => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+
+  return {
+    sms: "Yes",
+    thanhtoan: "Nợ",
+    thoigian: `${yyyy}-${mm}-${dd}T${hh}:${min}`,
+    tien: 0,
+    tienText: "",
+  };
 };
 
-
-
-
 const FormInputData = () => {
-
-
-  const [form, setForm] = useState({
-    sms: "Yes"
-  });
-
-
+  const [form, setForm] = useState(getDefaultFormState());
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [modalTransform, setModalTransform] = useState(null); // inline transform for jump animation
+  const [showAddButton, setShowAddButton] = useState(false);
   const [data, setData] = useState([]);
   const [editId, setEditId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const roitaiRef = collection(db, "roitai");
-  const [hienThongKe, setHienThongKe] = useState(false);
-  const [hienDropdown, setHienDropdown] = useState(false);
+  const roitaiRef = useMemo(() => collection(db, "roitai"), [db]);
+  const [showThongKeModal, setShowThongKeModal] = useState(false);
+  const [showDropdownModal, setShowDropdownModal] = useState(false);
+  const [showSmsComposeModal, setShowSmsComposeModal] = useState(false);
 
 
   useEffect(() => {
@@ -75,7 +76,7 @@ const FormInputData = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [roitaiRef]);
 
 
 
@@ -101,7 +102,6 @@ const FormInputData = () => {
 
 
   const [benhList, setbenhList] = useState([]);
-  const [selectedBenh, setSelectedBenh] = useState(""); // lưu giá trị đã chọn
 
   useEffect(() => {
     const fetchDropb = async () => {
@@ -178,9 +178,26 @@ const FormInputData = () => {
         thoigian: formatted,
       }));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const handleMouseMove = (event) => {
+      setShowAddButton(event.clientX <= 80);
+    };
 
+    const handleMouseLeave = () => {
+      setShowAddButton(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
 
 
   const handleChange = (e) => {
@@ -194,7 +211,6 @@ const FormInputData = () => {
         phone: khach?.phone || "",
       }));
     } else if (name === "loi") {
-      const benh = benhList.find((b) => b.ten === value);
       setForm((prev) => ({
         ...prev,
         loi: value,
@@ -226,6 +242,7 @@ const FormInputData = () => {
 // Kiểm tra thanh toán bằng Ví
 // ======================
 let paymentStatus = form.thanhtoan;
+let paymentMethod = "cash"; // mặc định thanh toán bằng tiền mặt
 
 if (paymentStatus === "Nợ") {
   const customer = khachHangList.find(
@@ -237,11 +254,41 @@ if (paymentStatus === "Nợ") {
     const repairCost = Number(form.tien || 0);
 
     if (wallet >= repairCost) {
+      const walletAfter = wallet - repairCost;
+      
+      // Cập nhật ví
       await updateDoc(doc(db, "dropkh", customer.id), {
-        wallet: wallet - repairCost,
+        wallet: walletAfter,
       });
 
+      // Ghi lịch sử giao dịch ví
+      await recordWalletHistory(
+        db,
+        customer.id,
+        customer.name,
+        "payment",
+        repairCost,
+        wallet,
+        walletAfter,
+        1, // paidCount = 1 vì chỉ 1 máy
+        `Thanh toán từ Ví (1 máy) với số tiền ${repairCost.toLocaleString('vi-VN')} ₫`,
+        customer.phone || '',
+        '',
+        'pending',
+        0,
+        {
+          relatedId: nextId?.toString?.() || null,
+          relatedCustomerName: customer.name,
+          relatedDeviceName: form.iphone || null,
+          relatedStatus: form.loi || null,
+          relatedImei: form.imei || null,
+          relatedThanhtoan: 'Ví',
+          relatedAmount: repairCost,
+        }
+      );
+
       paymentStatus = "Ví";
+      paymentMethod = "wallet";
     }
   }
 }
@@ -256,6 +303,7 @@ if (paymentStatus === "Nợ") {
     await setDoc(doc(roitaiRef, nextId.toString()), {
     ...form,
     thanhtoan: paymentStatus,
+    paymentMethod: paymentMethod,
     thoigian: formattedTime,
     sms: form.sms || "Yes"
 });
@@ -269,14 +317,9 @@ if (paymentStatus === "Nợ") {
     const min = String(now.getMinutes()).padStart(2, "0");
     const defaultTime = `${yyyy}-${mm}-${dd}T${hh}:${min}`; // để set lại input datetime-local
 
-    setForm({
-      sms: "Yes",
-      tien: 0,
-      tienText: "",
-      thoigian: defaultTime,
-    });
-
+    setForm(getDefaultFormState());
     setEditId(null);
+    setShowFormModal(false);
 
   } catch (error) {
     console.error("Lỗi khi thêm dữ liệu:", error);
@@ -295,118 +338,368 @@ if (paymentStatus === "Nợ") {
   const handleSave = async (id) => {
     try {
       await updateDoc(doc(roitaiRef, id.toString()), form);
-      setForm({});
+      setForm(getDefaultFormState());
       setEditId(null);
+      setShowFormModal(false);
     } catch (err) {
       console.error("Lỗi khi cập nhật:", err);
     }
   };
 
-  const handleCancel = () => {
+  const openAddModal = (e) => {
+    // capture click origin and compute delta to viewport center
+    try {
+      const rect = e?.currentTarget?.getBoundingClientRect?.();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const modalWidth = Math.min(900, vw - 80);
+      const modalHeight = Math.min(800, vh - 120);
+      const btnCx = rect ? rect.left + rect.width / 2 : vw / 2;
+      const btnCy = rect ? rect.top + rect.height / 2 : vh / 2;
+      const modalCx = vw / 2;
+      const modalCy = vh / 2;
+      const dx = btnCx - modalCx;
+      const dy = btnCy - modalCy;
+
+      const initial = `translate(${dx}px, ${dy}px) scale(0.75)`;
+      setModalTransform(initial);
+    } catch (err) {
+      setModalTransform(null);
+    }
+
     setEditId(null);
-    setForm({});
+    setForm(getDefaultFormState());
+    setShowFormModal(true);
+
+    // trigger transition to center
+    window.requestAnimationFrame(() => {
+      setTimeout(() => setModalTransform(null), 25);
+    });
+  };
+
+  const openEditModal = (row) => {
+    setEditId(row.id);
+    setForm(row);
+    setShowFormModal(true);
+  };
+
+  const closeFormModal = () => {
+    setShowFormModal(false);
+    setEditId(null);
+    setForm(getDefaultFormState());
   };
 
   return (
     <div className="container-fluid py-4">
+      <button
+        type="button"
+        onClick={() => openAddModal()}
+        className="btn btn-primary shadow-lg"
+        style={{
+          position: "fixed",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: "20px",
+          zIndex: 1200,
+          opacity: showAddButton ? 1 : 0,
+          pointerEvents: showAddButton ? "auto" : "none",
+          transition: "opacity 0.2s ease",
+          padding: "0.75rem 0.35rem",
+          fontWeight: 600,
+          borderRadius: "0 10px 10px 0",
+          writingMode: "vertical-rl",
+          textOrientation: "mixed",
+          whiteSpace: "nowrap",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "0.35rem",
+        }}
+        aria-label="Thêm mới"
+        title="Thêm mới"
+      >
+        <i className="bi bi-plus-lg"></i>
+        <span>Thêm</span>
+      </button>
+
       <div className="row justify-content-center">
-
-        {/* ✅ Cột bên trái: Gồm cả Form nhập liệu và bảng thống kê */}
-        <div className="col-lg-3 col-md-4" style={{ marginTop: "10px" }}>
-          <div className="card shadow-sm mt-6">
-            <div style={{ marginTop: "1px" }}>
-              <div className="card-header bg-primary text-white fw-bold text-center">
-                📝 Nhập Thông Tin
-              </div>
-
-              <FormNhapLieu
-                form={form}
-                setForm={setForm}
-                handleAddData={editId !== null ? () => handleSave(editId) : handleAddData}
-                khachHangList={khachHangList}
-                benhList={benhList}
-                imeiInputRef={imeiInputRef}
-                keyboardRef={keyboardRef}
-                showKeyboard={showKeyboard}
-                setShowKeyboard={setShowKeyboard}
-                handleVirtualKeyPress={handleVirtualKeyPress}
-                parseCurrency={parseCurrency}
-                formatCurrency={formatCurrency}
-                handleChange={handleChange}
-              />
-            </div>
-          </div>
-
-          {/* ✅ Thống kê nằm dưới form, cùng 1 cột */}
-          <div className="card mt-3 shadow-sm">
-
-            <button
-              className={`btn btn-sm fw-bold mb-3 w-100 ${hienThongKe ? "btn-warning" : "btn-outline-primary"
-                }`}
-              onClick={() => setHienThongKe(!hienThongKe)}
-            >
-              {hienThongKe ? (
-                <>
-                  Ẩn Thống Kê ▲
-                </>
-              ) : (
-                <>
-                  Hiện Thống Kê ▼
-                </>
-              )}
-            </button>
-
-
-            {hienThongKe && (
-              <div className="card-body p-2">
-                <ThongKeTable data={data} khachHangList={khachHangList} setKhachHangList={setKhachHangList} />
-              </div>
-            )}
-          </div>
-          {/* ✅ Bổ sung phần này bên trong col-lg-3 */}
-
-
-          <button
-            className={`btn btn-sm w-100 fw-bold ${hienDropdown ? "btn-danger" : "btn-outline-secondary"
-              }`}
-            onClick={() => setHienDropdown(!hienDropdown)}
-          >
-            {hienDropdown ? "Đóng Tùy Chỉnh ▲" : "Tùy Chỉnh ▼"}
-          </button>
-
-
-
-          {hienDropdown && (
-            <DanhSachDropdown
-              khachHangList={khachHangList}
-              setKhachHangList={setKhachHangList}
-              benhList={benhList}
-              setBenhList={setbenhList}
-            />
-          )}
-        </div>
-
-
-
-        {/* ✅ Cột bên phải: Bảng chính */}
-        <div className="col-lg-8 col-md-8">
-         
-
+        <div className="col-12 col-xl-10">
           <RoiTaiTable
             data={data}
             className="data-table-custom-size"
-            onEdit={(row) => {
-              setEditId(row.id);
-              setForm(row); // đổ dữ liệu lên form
-            }}
+            onEdit={openEditModal}
             onDelete={handleDelete}
-            editId={editId}
-            handleAddData={handleAddData}
+            onAdd={openAddModal}
+            onOpenThongKe={() => setShowThongKeModal(true)}
+            onOpenDropdown={() => setShowDropdownModal(true)}
+            onOpenSmsCompose={() => setShowSmsComposeModal(true)}
           />
+
+          <div className="mt-4">
+            <SmsHistoryTable />
+          </div>
         </div>
       </div>
-    </div>
 
+      {showThongKeModal && (
+        <div>
+          <div
+                className="modal-backdrop fade show"
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  backgroundColor: "rgba(0, 0, 0, 0.32)",
+                  opacity: 1,
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  zIndex: 2000,
+                }}
+          />
+          <div
+            className="modal fade show"
+                style={{
+                  display: "block",
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 2010,
+                  overflowY: "auto",
+                  padding: "2rem 1rem",
+                }}
+          >
+            <div className="modal-dialog modal-dialog-centered modal-xl">
+              <div className="modal-content shadow-lg modal-animate">
+                <div className="modal-header bg-info text-white">
+                  <div>
+                    <h5 className="modal-title">📊 Thống kê</h5>
+                    <div className="small opacity-75">Bảng báo cáo thống kê dữ liệu.</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => setShowThongKeModal(false)}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <ThongKeTable
+                    data={data}
+                    khachHangList={khachHangList}
+                    setKhachHangList={setKhachHangList}
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowThongKeModal(false)}
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDropdownModal && (
+        <div>
+          <div
+            className="modal-backdrop fade show"
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.32)",
+              opacity: 1,
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              zIndex: 2000,
+            }}
+          />
+          <div
+            className="modal fade show"
+            style={{
+              display: "block",
+              position: "fixed",
+              inset: 0,
+              zIndex: 2010,
+              overflowY: "auto",
+              padding: "2rem 1rem",
+            }}
+          >
+            <div className="modal-dialog modal-dialog-centered modal-xl">
+              <div className="modal-content shadow-lg modal-animate">
+                <div className="modal-header bg-secondary text-white">
+                  <div>
+                    <h5 className="modal-title">⚙️ Tùy chỉnh dữ liệu</h5>
+                    <div className="small opacity-75">Quản lý danh sách khách hàng và lỗi/tình trạng.</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => setShowDropdownModal(false)}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <DanhSachDropdown
+                    khachHangList={khachHangList}
+                    setKhachHangList={setKhachHangList}
+                    benhList={benhList}
+                    setBenhList={setbenhList}
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowDropdownModal(false)}
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSmsComposeModal && (
+        <div>
+          <div
+            className="modal-backdrop fade show"
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.32)",
+              opacity: 1,
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              zIndex: 2000,
+            }}
+          />
+          <div
+            className="modal fade show"
+            style={{
+              display: "block",
+              position: "fixed",
+              inset: 0,
+              zIndex: 2010,
+              overflowY: "auto",
+              padding: "2rem 1rem",
+            }}
+          >
+            <div className="modal-dialog modal-dialog-centered modal-xl">
+              <div className="modal-content shadow-lg modal-animate">
+                <div className="modal-header bg-success text-white">
+                  <div>
+                    <h5 className="modal-title">✉️ Soạn tin SMS</h5>
+                    
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => setShowSmsComposeModal(false)}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <SmsComposeBox khachHangList={khachHangList} />
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowSmsComposeModal(false)}
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFormModal && (
+        <div>
+          <div
+            className="modal-backdrop fade show"
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.32)",
+              opacity: 1,
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              zIndex: 2000,
+            }}
+          />
+          <div
+            className="modal fade show"
+            style={{
+              display: "block",
+              position: "fixed",
+              inset: 0,
+              zIndex: 2010,
+              overflowY: "auto",
+              padding: "2rem 1rem",
+            }}
+          >
+                <div
+                  className="modal-dialog modal-dialog-centered modal-md"
+                  style={{ maxWidth: "600px" }}
+                >
+                  <div
+                    className="modal-content shadow-lg modal-animate"
+                    style={{
+                      transform: modalTransform || undefined,
+                      transition: modalTransform ? "transform 0.35s ease-out, opacity 0.35s" : undefined,
+                    }}
+                  >
+                <div className="modal-header bg-primary text-white">
+                  <div>
+                    <h5 className="modal-title">
+                      {editId !== null ? "✏️ Chỉnh sửa" : "➕ Thêm mới"}
+                    </h5>
+                   
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={closeFormModal}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <FormNhapLieu
+                    form={form}
+                    setForm={setForm}
+                    handleAddData={editId !== null ? () => handleSave(editId) : handleAddData}
+                    khachHangList={khachHangList}
+                    benhList={benhList}
+                    imeiInputRef={imeiInputRef}
+                    keyboardRef={keyboardRef}
+                    showKeyboard={showKeyboard}
+                    setShowKeyboard={setShowKeyboard}
+                    handleVirtualKeyPress={handleVirtualKeyPress}
+                    parseCurrency={parseCurrency}
+                    formatCurrency={formatCurrency}
+                    handleChange={handleChange}
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={closeFormModal}
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
